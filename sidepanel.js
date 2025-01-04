@@ -173,7 +173,7 @@ function displayMemoList(memos) {
                 <img src="${memo.favicon}" class="w-4 h-4 mr-2" alt="">
                 <h3 class="font-semibold text-gray-800">${memo.title}</h3>
             </div>
-            <p class="text-sm text-gray-600 mb-2">${memo.summary}</p>
+            <p class="text-[0.6rem] leading-[0.9rem] text-gray-600 mb-2">${memo.summary}</p>
             <div class="flex justify-between items-center">
                 <div class="text-xs text-gray-500">
                     ${new Date(memo.timestamp).toLocaleString()}
