@@ -16,13 +16,23 @@ if (!window.webMemoInitialized) {
             .highlight-outline {
                 outline: 2px solid #34D399 !important;
                 outline-offset: 2px;
-                transition: outline-color 0.2s ease;
-            }
-            .highlight-selected {
-                background-color: rgba(52, 211, 153, 0.1) !important;
-                outline: 2px solid #34D399 !important;
-                outline-offset: 2px;
+                background-color: rgba(229, 231, 235, 0.2) !important;
                 transition: all 0.2s ease;
+                position: relative !important;
+                z-index: 2147483647 !important;
+            }
+            .highlight-outline::before {
+                content: 'Select Content';
+                position: absolute;
+                top: -24px;
+                left: -2px;
+                background-color: #065F46;
+                color: white;
+                padding: 2px 8px;
+                font-size: 11px;
+                border-radius: 4px;
+                font-family: system-ui, -apple-system, sans-serif;
+                z-index: 2147483647;
             }
         `;
         document.head.appendChild(style);
@@ -37,18 +47,12 @@ if (!window.webMemoInitialized) {
             document.body.style.cursor = window.webMemo.isHighlightMode ? 'crosshair' : 'default';
             
             // Clear any existing highlights when exiting highlight mode
-            if (!window.webMemo.isHighlightMode && window.webMemo.selectedElement) {
-                window.webMemo.selectedElement.classList.remove('highlight-selected');
-                window.webMemo.selectedElement = null;
+            if (!window.webMemo.isHighlightMode && window.webMemo.highlightedElement) {
+                window.webMemo.highlightedElement.classList.remove('highlight-outline');
+                window.webMemo.highlightedElement = null;
             }
             
             sendResponse({ success: true });
-        } else if (request.action === 'memoSaved') {
-            // Remove highlight when memo is saved
-            if (window.webMemo.selectedElement) {
-                window.webMemo.selectedElement.classList.remove('highlight-selected');
-                window.webMemo.selectedElement = null;
-            }
         }
         return true;
     });
@@ -81,17 +85,11 @@ if (!window.webMemoInitialized) {
         const element = e.target;
         console.log('Selected element:', element);
         
-        // Remove hover outline and add selection effect
-        element.classList.remove('highlight-outline');
-        element.classList.add('highlight-selected');
-        
-        // Store reference to selected element
-        window.webMemo.selectedElement = element;
-        
-        // Notify that selection is made
-        chrome.runtime.sendMessage({
-            action: 'selectionMade'
-        });
+        // Remove hover outline
+        if (window.webMemo.highlightedElement) {
+            window.webMemo.highlightedElement.classList.remove('highlight-outline');
+            window.webMemo.highlightedElement = null;
+        }
         
         // Clone the element to strip inline styles and scripts
         const cleanElement = element.cloneNode(true);
@@ -168,7 +166,6 @@ if (!window.webMemoInitialized) {
             // Reset highlight mode and remove selection effect
             window.webMemo.isHighlightMode = false;
             document.body.style.cursor = 'default';
-            element.classList.remove('highlight-selected');
             
             if (window.webMemo.highlightedElement) {
                 window.webMemo.highlightedElement.classList.remove('highlight-outline');
@@ -177,7 +174,6 @@ if (!window.webMemoInitialized) {
             
         } catch (error) {
             console.error('Failed to send memo data:', error);
-            element.classList.remove('highlight-selected');
             alert('Failed to save memo. Please try again.');
         }
     });
