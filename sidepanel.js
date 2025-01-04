@@ -234,10 +234,37 @@ function countWords(html) {
     return words.length + tagCount;
 }
 
-// Format word count
+// Count unique keys in JSON object recursively
+function countJsonKeys(obj) {
+    if (!obj) return 0;
+    
+    const uniqueKeys = new Set();
+    
+    function traverse(o) {
+        if (Array.isArray(o)) {
+            o.forEach(item => {
+                if (item && typeof item === 'object') {
+                    traverse(item);
+                }
+            });
+        } else if (typeof o === 'object') {
+            Object.keys(o).forEach(key => {
+                uniqueKeys.add(key);
+                if (o[key] && typeof o[key] === 'object') {
+                    traverse(o[key]);
+                }
+            });
+        }
+    }
+    
+    traverse(obj);
+    return uniqueKeys.size;
+}
+
+// Format count
 function formatCount(count, type = 'words') {
-    if (type === 'fields') {
-        return count === 1 ? '1 field' : `${count} fields`;
+    if (type === 'keys') {
+        return count === 1 ? '1 key' : `${count} keys`;
     }
     const formattedCount = count.toLocaleString();  // Add thousands separators
     return count === 1 ? '1 word' : `${formattedCount} words`;
@@ -259,8 +286,17 @@ function showMemoDetail(memo) {
     const narrativeWords = countWords(memo.narrative);
     document.getElementById('memoNarrativeSize').textContent = formatCount(narrativeWords);
     
-    const dataFieldsCount = memo.structuredData ? Object.keys(memo.structuredData).length : 0;
-    document.getElementById('memoDataFields').textContent = formatCount(dataFieldsCount, 'fields');
+    let structuredData;
+    try {
+        structuredData = typeof memo.structuredData === 'string' 
+            ? JSON.parse(memo.structuredData) 
+            : memo.structuredData;
+    } catch (e) {
+        structuredData = null;
+    }
+    
+    const keyCount = countJsonKeys(structuredData);
+    document.getElementById('memoDataFields').textContent = formatCount(keyCount, 'keys');
     
     const narrativeDiv = document.getElementById('memoNarrative');
     const jsonDiv = document.getElementById('memoJson');
