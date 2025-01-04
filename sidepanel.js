@@ -1,5 +1,6 @@
 // UI Elements
 const memoButton = document.getElementById('memoButton');
+const memosButton = document.getElementById('memosButton');
 const memoListView = document.getElementById('memoListView');
 const memoDetailView = document.getElementById('memoDetailView');
 const backButton = document.getElementById('backButton');
@@ -12,6 +13,28 @@ let currentMemo = null;
 document.addEventListener('DOMContentLoaded', () => {
     loadMemos();
     checkApiKey();
+    
+    // Add click handler for memos button
+    memosButton.addEventListener('click', () => {
+        // If in detail view, go back to list
+        memoDetailView.classList.add('hidden');
+        memoListView.classList.remove('hidden');
+        
+        // Reset capture mode if active
+        if (isHighlightMode) {
+            resetMemoButton();
+            chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+                try {
+                    await chrome.tabs.sendMessage(tabs[0].id, {
+                        action: 'toggleHighlightMode',
+                        enabled: false
+                    });
+                } catch (error) {
+                    console.error('Failed to disable highlight mode:', error);
+                }
+            });
+        }
+    });
 });
 
 // Show status update
@@ -195,7 +218,7 @@ function setSavingState() {
 // Reset button to initial state
 function resetMemoButton() {
     isHighlightMode = false;
-    memoButton.textContent = 'Start Memo';
+    memoButton.textContent = 'Capture';
     memoButton.disabled = false;
     memoButton.classList.remove('bg-red-500', 'bg-gray-400', 'cursor-not-allowed');
     memoButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
