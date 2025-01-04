@@ -10,6 +10,22 @@ if (!window.webMemoInitialized) {
 
     // Initialize the content script
     function initialize() {
+        // Add styles for highlighting
+        const style = document.createElement('style');
+        style.textContent = `
+            .highlight-outline {
+                outline: 2px solid #34D399 !important;
+                outline-offset: 2px;
+                transition: outline-color 0.2s ease;
+            }
+            .highlight-selected {
+                background-color: rgba(52, 211, 153, 0.1) !important;
+                outline: 2px solid #34D399 !important;
+                outline-offset: 2px;
+                transition: all 0.2s ease;
+            }
+        `;
+        document.head.appendChild(style);
         console.log('Web Memo content script initialized');
     }
 
@@ -19,9 +35,22 @@ if (!window.webMemoInitialized) {
         if (request.action === 'toggleHighlightMode') {
             window.webMemo.isHighlightMode = request.enabled;
             document.body.style.cursor = window.webMemo.isHighlightMode ? 'crosshair' : 'default';
+            
+            // Clear any existing highlights when exiting highlight mode
+            if (!window.webMemo.isHighlightMode && window.webMemo.selectedElement) {
+                window.webMemo.selectedElement.classList.remove('highlight-selected');
+                window.webMemo.selectedElement = null;
+            }
+            
             sendResponse({ success: true });
+        } else if (request.action === 'memoSaved') {
+            // Remove highlight when memo is saved
+            if (window.webMemo.selectedElement) {
+                window.webMemo.selectedElement.classList.remove('highlight-selected');
+                window.webMemo.selectedElement = null;
+            }
         }
-        return true; // Keep the message channel open for async response
+        return true;
     });
 
     // Add mouseover effect for elements
@@ -29,12 +58,17 @@ if (!window.webMemoInitialized) {
         if (!window.webMemo.isHighlightMode) return;
         
         if (window.webMemo.highlightedElement) {
-            window.webMemo.highlightedElement.style.outline = '';
+            window.webMemo.highlightedElement.classList.remove('highlight-outline');
         }
         
         window.webMemo.highlightedElement = e.target;
-        e.target.style.outline = '2px solid #3B82F6';
+        e.target.classList.add('highlight-outline');
         e.stopPropagation();
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        if (!window.webMemo.isHighlightMode || !window.webMemo.highlightedElement) return;
+        window.webMemo.highlightedElement.classList.remove('highlight-outline');
     });
 
     // Handle click on highlighted element
@@ -46,6 +80,18 @@ if (!window.webMemoInitialized) {
         
         const element = e.target;
         console.log('Selected element:', element);
+        
+        // Remove hover outline and add selection effect
+        element.classList.remove('highlight-outline');
+        element.classList.add('highlight-selected');
+        
+        // Store reference to selected element
+        window.webMemo.selectedElement = element;
+        
+        // Notify that selection is made
+        chrome.runtime.sendMessage({
+            action: 'selectionMade'
+        });
         
         // Clone the element to strip inline styles and scripts
         const cleanElement = element.cloneNode(true);
@@ -84,18 +130,13 @@ if (!window.webMemoInitialized) {
                     !el.querySelector('img')) {
                     el.remove();
                 }
-                
-                // Remove data attributes
-                Object.keys(el.dataset).forEach(key => {
-                    delete el.dataset[key];
-                });
             });
             
             // Clean whitespace and normalize text
             node.innerHTML = node.innerHTML
-                .replace(/(\s{2,}|\n|\t|\r)/g, ' ')  // Replace multiple spaces, newlines, tabs with single space
-                .replace(/>\s+</g, '><')             // Remove whitespace between tags
-                .trim();                             // Trim outer whitespace
+                .replace(/(\s{2,}|\n|\t|\r)/g, ' ')
+                .replace(/>\s+</g, '><')
+                .trim();
             
             return node;
         }
@@ -124,33 +165,19 @@ if (!window.webMemoInitialized) {
                 data: memoData
             });
             
-            // Reset highlight mode
+            // Reset highlight mode and remove selection effect
             window.webMemo.isHighlightMode = false;
             document.body.style.cursor = 'default';
+            element.classList.remove('highlight-selected');
+            
             if (window.webMemo.highlightedElement) {
-                window.webMemo.highlightedElement.style.outline = '';
+                window.webMemo.highlightedElement.classList.remove('highlight-outline');
                 window.webMemo.highlightedElement = null;
             }
             
-            // Show success message
-            const toast = document.createElement('div');
-            toast.textContent = 'Content saved successfully!';
-            toast.style.cssText = `
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                background: #10B981;
-                color: white;
-                padding: 12px 24px;
-                border-radius: 6px;
-                z-index: 10000;
-                font-family: system-ui, -apple-system, sans-serif;
-            `;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-            
         } catch (error) {
             console.error('Failed to send memo data:', error);
+            element.classList.remove('highlight-selected');
             alert('Failed to save memo. Please try again.');
         }
     });

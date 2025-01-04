@@ -118,14 +118,13 @@ async function handleMemo(memoData) {
         chrome.storage.local.get(['memos'], (result) => {
             const memos = result.memos || [];
             memos.unshift(memo);
-            chrome.storage.local.set({ memos }, () => {
-                // Notify side panel about new memo
-                chrome.runtime.sendMessage({
-                    action: 'memoSaved',
-                    memo
-                });
-                console.log('Memo saved successfully');
+            chrome.storage.local.set({ memos });
+            
+            // Notify content script and side panel
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                chrome.tabs.sendMessage(tabs[0].id, { action: 'memoSaved' });
             });
+            chrome.runtime.sendMessage({ action: 'memoSaved' });
         });
 
     } catch (error) {

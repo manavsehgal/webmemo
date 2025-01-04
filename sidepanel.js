@@ -14,41 +14,132 @@ document.addEventListener('DOMContentLoaded', () => {
     checkApiKey();
 });
 
+// Show status update
+function showStatus(status, subtext = '') {
+    const statusArea = document.getElementById('statusArea');
+    const statusBadge = document.getElementById('statusBadge');
+    const statusIcon = document.getElementById('statusIcon');
+    const statusText = document.getElementById('statusText');
+    const statusSubtext = document.getElementById('statusSubtext');
+    const selectionGuide = document.getElementById('selectionGuide');
+
+    // Configure status
+    switch (status) {
+        case 'select':
+            statusIcon.innerHTML = `<svg class="text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M6.672 1.911a1 1 0 10-1.932.518l.259.966a1 1 0 001.932-.518l-.26-.966zM2.429 4.74a1 1 0 10-.517 1.932l.966.259a1 1 0 00.517-1.932l-.966-.26zm8.814-.569a1 1 0 00-1.415-1.414l-.707.707a1 1 0 101.415 1.415l.707-.708zm-7.071 7.072l.707-.707A1 1 0 003.465 9.12l-.708.707a1 1 0 001.415 1.415zm3.2-5.171a1 1 0 00-1.3 1.3l4 10a1 1 0 001.823.075l1.38-2.759 3.018 3.02a1 1 0 001.414-1.415l-3.019-3.02 2.76-1.379a1 1 0 00-.076-1.822l-10-4z" />
+            </svg>`;
+            statusText.textContent = 'Select content to capture';
+            selectionGuide.classList.remove('hidden');
+            setTimeout(() => {
+                selectionGuide.classList.remove('translate-y-2', 'opacity-0');
+            }, 50);
+            break;
+        case 'selected':
+            statusIcon.innerHTML = `<svg class="text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>`;
+            statusText.textContent = 'Content selected';
+            selectionGuide.classList.add('translate-y-2', 'opacity-0');
+            setTimeout(() => {
+                selectionGuide.classList.add('hidden');
+            }, 300);
+            break;
+        case 'processing':
+            statusIcon.innerHTML = `<svg class="text-blue-500 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>`;
+            statusText.textContent = 'Processing content';
+            selectionGuide.classList.add('translate-y-2', 'opacity-0');
+            setTimeout(() => {
+                selectionGuide.classList.add('hidden');
+            }, 300);
+            break;
+        case 'saved':
+            statusIcon.innerHTML = `<svg class="text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+            </svg>`;
+            statusText.textContent = 'Memo saved successfully';
+            selectionGuide.classList.add('translate-y-2', 'opacity-0');
+            setTimeout(() => {
+                selectionGuide.classList.add('hidden');
+            }, 300);
+            break;
+        case 'error':
+            statusIcon.innerHTML = `<svg class="text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>`;
+            statusText.textContent = 'Error processing content';
+            selectionGuide.classList.add('translate-y-2', 'opacity-0');
+            setTimeout(() => {
+                selectionGuide.classList.add('hidden');
+            }, 300);
+            break;
+    }
+
+    if (subtext) {
+        statusSubtext.textContent = subtext;
+        statusSubtext.classList.remove('hidden');
+    } else {
+        statusSubtext.classList.add('hidden');
+    }
+
+    // Show status with animation
+    statusArea.style.height = 'auto';
+    const height = statusArea.offsetHeight;
+    statusArea.style.height = '0';
+    
+    // Trigger reflow
+    statusArea.offsetHeight;
+    
+    // Animate in
+    statusArea.style.height = height + 'px';
+    statusBadge.classList.remove('translate-y-2', 'opacity-0');
+
+    // Auto-hide after delay for certain statuses
+    if (status === 'saved' || status === 'error') {
+        setTimeout(() => {
+            // Animate out
+            statusBadge.classList.add('translate-y-2', 'opacity-0');
+            statusArea.style.height = '0';
+        }, 3000);
+    }
+}
+
+// Reset status area
+function hideStatus() {
+    const statusArea = document.getElementById('statusArea');
+    const statusBadge = document.getElementById('statusBadge');
+    const selectionGuide = document.getElementById('selectionGuide');
+
+    statusBadge.classList.add('translate-y-2', 'opacity-0');
+    statusArea.style.height = '0';
+    selectionGuide.classList.add('translate-y-2', 'opacity-0');
+    setTimeout(() => {
+        selectionGuide.classList.add('hidden');
+    }, 300);
+}
+
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((message) => {
-    if (message.action === 'memoSaved') {
+    if (message.action === 'selectionMade') {
+        showStatus('selected');
+        setSavingState();
+    } else if (message.action === 'memoSaved') {
         loadMemos(); // Refresh the memo list
-        showToast('Memo saved successfully!', 'success');
+        showStatus('saved');
         resetMemoButton();
     } else if (message.action === 'error') {
-        showToast(message.error, 'error');
+        showStatus('error', message.error);
         resetMemoButton();
         if (message.error.includes('API key not set')) {
             checkApiKey();
         }
     } else if (message.action === 'savingMemo') {
-        setSavingState();
+        showStatus('processing', 'Extracting narrative and data...');
     }
 });
-
-// Show toast notification
-function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.textContent = message;
-    toast.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        padding: 12px 24px;
-        border-radius: 6px;
-        z-index: 10000;
-        font-family: system-ui, -apple-system, sans-serif;
-        color: white;
-        ${type === 'success' ? 'background: #10B981;' : 'background: #EF4444;'}
-    `;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
 
 // Check and prompt for API key
 async function checkApiKey() {
@@ -60,16 +151,16 @@ async function checkApiKey() {
                 action: 'setApiKey',
                 apiKey
             });
-            showToast('API key set successfully!', 'success');
+            showStatus('saved', 'API key set successfully');
         } else {
-            showToast('API key is required for memo processing', 'error');
+            showStatus('error', 'API key is required for memo processing');
         }
     }
 }
 
 // Set button to saving state
 function setSavingState() {
-    memoButton.textContent = 'Saving...';
+    memoButton.textContent = 'Processing...';
     memoButton.disabled = true;
     memoButton.classList.remove('bg-red-500', 'bg-blue-500', 'hover:bg-blue-600');
     memoButton.classList.add('bg-gray-400', 'cursor-not-allowed');
@@ -82,6 +173,7 @@ function resetMemoButton() {
     memoButton.disabled = false;
     memoButton.classList.remove('bg-red-500', 'bg-gray-400', 'cursor-not-allowed');
     memoButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+    document.getElementById('selectionGuide').classList.add('hidden');
 }
 
 // Toggle highlight mode
@@ -91,7 +183,7 @@ memoButton.addEventListener('click', async () => {
     // Check for API key before enabling highlight mode
     const result = await chrome.storage.local.get(['anthropicApiKey']);
     if (!result.anthropicApiKey) {
-        showToast('Please set your API key first', 'error');
+        showStatus('error', 'Please set your API key first');
         checkApiKey();
         return;
     }
@@ -101,6 +193,7 @@ memoButton.addEventListener('click', async () => {
         memoButton.textContent = 'Cancel';
         memoButton.classList.remove('bg-blue-500');
         memoButton.classList.add('bg-red-500');
+        showStatus('select');
     } else {
         resetMemoButton();
     }
@@ -145,10 +238,10 @@ async function deleteMemo(memoId) {
         const updatedMemos = memos.filter(memo => memo.id !== memoId);
         
         await chrome.storage.local.set({ memos: updatedMemos });
-        showToast('Memo deleted successfully', 'success');
+        showStatus('saved', 'Memo deleted successfully');
         
         // If in detail view, go back to list
-        if (!memoListView.classList.contains('hidden')) {
+        if (memoDetailView.classList.contains('hidden')) {
             loadMemos();
         } else {
             memoDetailView.classList.add('hidden');
@@ -157,7 +250,7 @@ async function deleteMemo(memoId) {
         }
     } catch (error) {
         console.error('Failed to delete memo:', error);
-        showToast('Failed to delete memo', 'error');
+        showStatus('error', 'Failed to delete memo');
     }
 }
 
@@ -336,10 +429,10 @@ document.getElementById('copyButton').addEventListener('click', () => {
     };
     
     navigator.clipboard.writeText(JSON.stringify(content, null, 2))
-        .then(() => showToast('Content copied to clipboard!', 'success'))
+        .then(() => showStatus('saved', 'Content copied to clipboard!'))
         .catch(err => {
             console.error('Failed to copy:', err);
-            showToast('Failed to copy content', 'error');
+            showStatus('error', 'Failed to copy content');
         });
 });
 
@@ -364,7 +457,7 @@ document.getElementById('downloadButton').addEventListener('click', () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showToast('Memo downloaded successfully', 'success');
+    showStatus('saved', 'Memo downloaded successfully');
 });
 
 // Delete button handler
