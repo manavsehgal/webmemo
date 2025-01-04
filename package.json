@@ -1,0 +1,15 @@
+{
+  "name": "web-memo",
+  "version": "1.0.0",
+  "description": "Chrome extension for saving and analyzing webpage content",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.18.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.1"
+  },
+  "scripts": {
+    "build": "esbuild background.js --bundle --outfile=dist/background.bundle.js --platform=browser --format=esm"
+  },
+  "type": "module"
+} 

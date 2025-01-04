@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web Memo</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .memo-list-item:hover {
+            background-color: #f3f4f6;
+        }
+        .highlight-mode {
+            cursor: crosshair !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto p-4">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Web Memo</h1>
+            <button id="memoButton" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                Start Memo
+            </button>
+        </div>
+
+        <!-- Memo List View -->
+        <div id="memoListView" class="space-y-4">
+            <!-- Memo items will be dynamically added here -->
+        </div>
+
+        <!-- Memo Detail View (hidden by default) -->
+        <div id="memoDetailView" class="hidden space-y-4">
+            <button id="backButton" class="text-blue-500 hover:text-blue-600 mb-4">
+                ← Back to List
+            </button>
+            <div id="memoDetail" class="bg-white rounded-lg shadow p-6">
+                <h2 id="memoTitle" class="text-xl font-bold mb-2"></h2>
+                <div class="flex items-center text-sm text-gray-500 mb-4">
+                    <span id="memoTimestamp"></span>
+                    <a id="memoSource" href="#" target="_blank" class="ml-4 flex items-center">
+                        <img id="memoFavicon" class="w-4 h-4 mr-1" src="" alt="">
+                        <span>Source</span>
+                    </a>
+                </div>
+                <div id="memoSummary" class="text-gray-600 mb-4"></div>
+                <div class="bg-gray-50 p-3 rounded-lg mb-4 text-xs">
+                    <div class="grid grid-cols-3 text-center">
+                        <div class="border-r border-gray-200 px-2">
+                            <div class="text-gray-500 uppercase tracking-wide">Source</div>
+                            <div id="memoSourceSize" class="text-gray-800 font-medium mt-1"></div>
+                        </div>
+                        <div class="border-r border-gray-200 px-2">
+                            <div class="text-gray-500 uppercase tracking-wide">Narrative</div>
+                            <div id="memoNarrativeSize" class="text-gray-800 font-medium mt-1"></div>
+                        </div>
+                        <div class="px-2">
+                            <div class="text-gray-500 uppercase tracking-wide">Data</div>
+                            <div id="memoDataFields" class="text-gray-800 font-medium mt-1"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div id="memoNarrative" class="prose"></div>
+                    <div id="memoJson" class="bg-gray-50 p-4 rounded-lg font-mono text-sm"></div>
+                </div>
+                <div class="flex space-x-4 mt-6">
+                    <button id="copyButton" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg">
+                        Copy
+                    </button>
+                    <button id="downloadButton" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg">
+                        Download
+                    </button>
+                    <button id="deleteButton" class="bg-red-100 hover:bg-red-200 text-red-800 px-4 py-2 rounded-lg">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="sidepanel.js"></script>
+</body>
+</html> 
