@@ -212,14 +212,26 @@ function countWords(html) {
     const temp = document.createElement('div');
     temp.innerHTML = html;
     
-    // Count HTML tags
-    const tagCount = temp.getElementsByTagName('*').length;
-    
     // Get text content and count words
-    const text = temp.textContent || temp.innerText;
-    const wordCount = text.trim().split(/\s+/).filter(word => word.length > 0).length;
+    const text = temp.textContent || temp.innerText || '';
+    const words = text.trim()
+        .replace(/[\r\n\t]+/g, ' ')     // Replace newlines and tabs with spaces
+        .replace(/\s+/g, ' ')           // Replace multiple spaces with single space
+        .split(' ')
+        .filter(word => word.length > 0);
     
-    return tagCount + wordCount;
+    // Count HTML tags (excluding empty/self-closing tags)
+    const tagMatches = html.match(/<\/?[a-z][^>]*>/gi) || [];
+    const tagCount = tagMatches.filter(tag => !tag.match(/<[^>]+\/>/)).length;
+    
+    console.log('Word count details:', {
+        text: text.substring(0, 100) + '...',  // Log first 100 chars
+        wordCount: words.length,
+        tagCount,
+        totalCount: words.length + tagCount
+    });
+    
+    return words.length + tagCount;
 }
 
 // Format word count
@@ -227,7 +239,8 @@ function formatCount(count, type = 'words') {
     if (type === 'fields') {
         return count === 1 ? '1 field' : `${count} fields`;
     }
-    return count === 1 ? '1 word' : `${count} words`;
+    const formattedCount = count.toLocaleString();  // Add thousands separators
+    return count === 1 ? '1 word' : `${formattedCount} words`;
 }
 
 // Show memo detail

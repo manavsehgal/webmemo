@@ -1891,9 +1891,9 @@ async function processWithClaude(content) {
   const systemPrompt = `You are an AI assistant helping to analyze web content. Your task is to:
 1. Generate a concise but descriptive title for the content
 2. Create a brief summary (2-3 sentences)
-3. Based on the content type:
-   - If it's structured data: Convert to clean JSON format
-   - If it's narrative content: Create a well-formatted narrative version
+3. Analyze the text and html tags:
+   - If any part of the content represents structured data like a table or key value pairs: Convert to clean JSON format
+   - Create a text narrative in proper English based on all of the source content including structured data.
 Please respond in JSON format with fields: title, summary, narrative (if applicable), structuredData (if applicable)`;
   try {
     const response = await anthropicClient.messages.create({
@@ -1959,9 +1959,16 @@ async function handleMemo(memoData) {
     const processedContent = await processWithClaude(memoData.rawHtml);
     console.log("Received processed content:", processedContent);
     const memo = {
-      ...memoData,
-      ...processedContent,
-      id: Date.now().toString()
+      id: Date.now().toString(),
+      url: memoData.url,
+      favicon: memoData.favicon,
+      timestamp: memoData.timestamp,
+      sourceHtml: memoData.rawHtml,
+      // Save the cleaned HTML
+      title: processedContent.title,
+      summary: processedContent.summary,
+      narrative: processedContent.narrative,
+      structuredData: processedContent.structuredData
     };
     chrome.storage.local.get(["memos"], (result) => {
       const memos = result.memos || [];
