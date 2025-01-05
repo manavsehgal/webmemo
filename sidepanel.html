@@ -148,6 +148,178 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Tags Panel -->
+            <div id="tagsPanel" class="hidden space-y-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-lg font-semibold text-gray-800">Tags</h2>
+                    <button id="addTagButton" class="text-blue-500 hover:text-blue-600 text-sm flex items-center">
+                        <svg class="w-4 h-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                        </svg>
+                        Add Tag
+                    </button>
+                </div>
+
+                <!-- Add Tag Form -->
+                <div id="addTagForm" class="hidden bg-gray-50 p-4 rounded-lg space-y-3 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tag Name</label>
+                        <input type="text" id="newTagName" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea id="newTagDescription" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex justify-end space-x-2">
+                        <button id="cancelAddTag" class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+                        <button id="saveNewTag" class="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600">Save Tag</button>
+                    </div>
+                </div>
+
+                <!-- Tags List -->
+                <div id="tagsList" class="space-y-3">
+                    <!-- Shopping -->
+                    <div class="group flex items-start space-x-3 p-3 bg-pink-50 rounded-lg">
+                        <div class="flex-shrink-0">
+                            <svg class="w-5 h-5 text-pink-500" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3z" />
+                            </svg>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium text-pink-900">Shopping</span>
+                                <button class="hidden group-hover:block text-pink-400 hover:text-pink-600">
+                                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="text-sm text-pink-700 mt-1">Shopping discovery, research, trends, deals, comparisons, reviews, and recommendations.</p>
+                        </div>
+                    </div>
+
+                    <!-- Travel -->
+                    <div class="group flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                        <div class="flex-shrink-0">
+                            <svg class="w-5 h-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                            </svg>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium text-blue-900">Travel</span>
+                                <button class="hidden group-hover:block text-blue-400 hover:text-blue-600">
+                                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="text-sm text-blue-700 mt-1">Travel planning, research, deals, and recommendations.</p>
+                        </div>
+                    </div>
+
+                    <!-- Health -->
+                    <div class="group flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
+                        <div class="flex-shrink-0">
+                            <svg class="w-5 h-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium text-green-900">Health</span>
+                                <button class="hidden group-hover:block text-green-400 hover:text-green-600">
+                                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="text-sm text-green-700 mt-1">Health research, tips, and advice.</p>
+                        </div>
+                    </div>
+
+                    <!-- Technology -->
+                    <div class="group flex items-start space-x-3 p-3 bg-purple-50 rounded-lg">
+                        <div class="flex-shrink-0">
+                            <svg class="w-5 h-5 text-purple-500" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zm3 14a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium text-purple-900">Technology</span>
+                                <button class="hidden group-hover:block text-purple-400 hover:text-purple-600">
+                                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="text-sm text-purple-700 mt-1">Technology research, tips, advice, learning, products, companies, and trends.</p>
+                        </div>
+                    </div>
+
+                    <!-- Investing -->
+                    <div class="group flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg">
+                        <div class="flex-shrink-0">
+                            <svg class="w-5 h-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium text-yellow-900">Investing</span>
+                                <button class="hidden group-hover:block text-yellow-400 hover:text-yellow-600">
+                                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="text-sm text-yellow-700 mt-1">Investing research, tips, and advice.</p>
+                        </div>
+                    </div>
+
+                    <!-- Entertainment -->
+                    <div class="group flex items-start space-x-3 p-3 bg-red-50 rounded-lg">
+                        <div class="flex-shrink-0">
+                            <svg class="w-5 h-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.92 3.845a19.361 19.361 0 01-6.85 1.335c-2.354.068-4.73-.108-7.07-.577v11.543c2.34.47 4.716.645 7.07.577 2.354-.068 4.73-.344 7.07-.577V3.845z" />
+                            </svg>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium text-red-900">Entertainment</span>
+                                <button class="hidden group-hover:block text-red-400 hover:text-red-600">
+                                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="text-sm text-red-700 mt-1">Restaurants, movies, music, books, and events.</p>
+                        </div>
+                    </div>
+
+                    <!-- Education -->
+                    <div class="group flex items-start space-x-3 p-3 bg-indigo-50 rounded-lg">
+                        <div class="flex-shrink-0">
+                            <svg class="w-5 h-5 text-indigo-500" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
+                            </svg>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium text-indigo-900">Education</span>
+                                <button class="hidden group-hover:block text-indigo-400 hover:text-indigo-600">
+                                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="text-sm text-indigo-700 mt-1">Learning, courses, and resources.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <script src="sidepanel.js"></script>

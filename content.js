@@ -54,7 +54,6 @@ if (!window.webMemoInitialized) {
             
             sendResponse({ success: true });
         }
-        return true;
     });
 
     // Add mouseover effect for elements
@@ -76,7 +75,7 @@ if (!window.webMemoInitialized) {
     });
 
     // Handle click on highlighted element
-    document.addEventListener('click', async (e) => {
+    document.addEventListener('click', (e) => {
         if (!window.webMemo.isHighlightMode) return;
         
         e.preventDefault();
@@ -151,31 +150,35 @@ if (!window.webMemoInitialized) {
         
         console.log('Sending memo data:', memoData);
         
-        try {
-            // Notify that saving is starting
-            chrome.runtime.sendMessage({
-                action: 'savingMemo'
-            });
-            
-            // Send the data to the background script
-            await chrome.runtime.sendMessage({
-                action: 'processMemo',
-                data: memoData
-            });
-            
-            // Reset highlight mode and remove selection effect
-            window.webMemo.isHighlightMode = false;
-            document.body.style.cursor = 'default';
-            
-            if (window.webMemo.highlightedElement) {
-                window.webMemo.highlightedElement.classList.remove('highlight-outline');
-                window.webMemo.highlightedElement = null;
+        // Notify that saving is starting
+        chrome.runtime.sendMessage({
+            action: 'savingMemo'
+        });
+        
+        // Send the data to the background script
+        chrome.runtime.sendMessage({
+            action: 'processMemo',
+            data: memoData
+        }, (response) => {
+            if (!response) {
+                console.error('No response received from background script');
+                return;
             }
             
-        } catch (error) {
-            console.error('Failed to send memo data:', error);
-            alert('Failed to save memo. Please try again.');
-        }
+            if (response.success) {
+                // Reset highlight mode and remove selection effect
+                window.webMemo.isHighlightMode = false;
+                document.body.style.cursor = 'default';
+                
+                if (window.webMemo.highlightedElement) {
+                    window.webMemo.highlightedElement.classList.remove('highlight-outline');
+                    window.webMemo.highlightedElement = null;
+                }
+            } else {
+                console.error('Failed to process memo:', response.error || 'Unknown error');
+                alert('Failed to save memo. Please try again.');
+            }
+        });
     });
 
     // Initialize the content script

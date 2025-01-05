@@ -1879,23 +1879,50 @@ var anthropicClient = null;
 chrome.action.onClicked.addListener((tab) => {
   chrome.sidePanel.open({ tabId: tab.id });
 });
-async function processWithClaude(content) {
+async function processWithClaude(content, url, tags) {
   if (!anthropicClient) {
     anthropicClient = new Anthropic({
-      apiKey: anthropicApiKey,
-      defaultHeaders: {
-        "anthropic-dangerous-direct-browser-access": "true"
-      }
+      apiKey: anthropicApiKey
     });
   }
-  const systemPrompt = `You are an AI assistant helping to analyze web content. Your task is to:
+  const domain = new URL(url).hostname;
+  const formattedTags = tags.map((tag) => ({
+    name: tag.name || tag,
+    description: tag.description || `Content related to ${tag.name || tag}`
+  }));
+  console.log("Available tags for classification:", formattedTags);
+  const systemPrompt = `You are an AI assistant helping to analyze web content. 
+
+Source Website Information:
+- Domain: ${domain}
+- URL: ${url}
+
+Your task is to:
 1. Generate a concise but descriptive title for the content
 2. Create a brief summary (2-3 sentences)
-3. Analyze the text and html tags:
-   - If any part of the content represents structured data like a table or key value pairs: Convert to clean JSON format
-   - Create a text narrative in proper English based on all of the source content including structured data.
-Please respond in JSON format with fields: title, summary, narrative (if applicable), structuredData (if applicable)`;
+3. Based on the content type:
+   - If it's structured data: Convert to clean JSON format
+   - If it's narrative content: Create a well-formatted narrative version
+4. MOST IMPORTANTLY: Select exactly one tag from these options that best matches the content:
+${formattedTags.map((tag) => `- ${tag.name}: ${tag.description}`).join("\n")}
+- Untagged: Content that doesn't clearly match any existing tag.
+
+CRITICAL INSTRUCTIONS FOR TAG SELECTION:
+- You MUST choose exactly one tag
+- The selectedTag field in your response MUST be a string that exactly matches one of the tag names listed above
+- If no tag clearly matches, use "Untagged"
+- Do not create new tags or modify existing tag names
+
+Respond with this exact JSON structure:
+{
+    "title": "your generated title",
+    "summary": "your generated summary",
+    "narrative": "your narrative version if applicable",
+    "selectedTag": "EXACT_MATCHING_TAG_NAME",
+    "structuredData": "your structured data if applicable"
+}`;
   try {
+    console.log("Sending prompt to Claude with tags:", formattedTags.map((t) => t.name));
     const response = await anthropicClient.messages.create({
       model: "claude-3-5-sonnet-20241022",
       max_tokens: 4096,
@@ -1908,12 +1935,21 @@ Please respond in JSON format with fields: title, summary, narrative (if applica
       ]
     });
     try {
-      return JSON.parse(response.content[0].text);
+      const parsedResponse = JSON.parse(response.content[0].text);
+      console.log("Claude response:", parsedResponse);
+      const validTags = [...formattedTags.map((t) => t.name), "Untagged"];
+      if (!validTags.includes(parsedResponse.selectedTag)) {
+        console.warn("Invalid tag selected:", parsedResponse.selectedTag);
+        parsedResponse.selectedTag = "Untagged";
+      }
+      return parsedResponse;
     } catch (e) {
+      console.error("Failed to parse Claude response:", e);
       return {
         title: "Error Processing Content",
         summary: "Failed to parse the content into the expected format.",
-        narrative: response.content[0].text
+        narrative: response.content[0].text,
+        selectedTag: "Untagged"
       };
     }
   } catch (error) {
@@ -1923,7 +1959,8 @@ Please respond in JSON format with fields: title, summary, narrative (if applica
 }
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "processMemo") {
-    handleMemo(request.data);
+    handleMemo(request.data).then(() => sendResponse({ success: true })).catch((error) => sendResponse({ success: false, error: error.message }));
+    return true;
   } else if (request.action === "setApiKey") {
     anthropicApiKey = request.apiKey;
     anthropicClient = new Anthropic({
@@ -1933,6 +1970,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     });
     chrome.storage.local.set({ anthropicApiKey: request.apiKey });
+    sendResponse({ success: true });
   }
 });
 chrome.storage.local.get(["anthropicApiKey"], (result) => {
@@ -1955,8 +1993,11 @@ async function handleMemo(memoData) {
       });
       throw new Error("Anthropic API key not set");
     }
+    const tagsResult = await chrome.storage.local.get(["tags"]);
+    const tags = tagsResult.tags || [];
+    console.log("Processing memo with tags:", tags);
     console.log("Processing memo with content length:", memoData.rawHtml.length);
-    const processedContent = await processWithClaude(memoData.rawHtml);
+    const processedContent = await processWithClaude(memoData.rawHtml, memoData.url, tags);
     console.log("Received processed content:", processedContent);
     const memo = {
       id: Date.now().toString(),
@@ -1968,17 +2009,26 @@ async function handleMemo(memoData) {
       title: processedContent.title,
       summary: processedContent.summary,
       narrative: processedContent.narrative,
-      structuredData: processedContent.structuredData
+      structuredData: processedContent.structuredData,
+      tag: processedContent.selectedTag
     };
-    chrome.storage.local.get(["memos"], (result) => {
-      const memos = result.memos || [];
-      memos.unshift(memo);
-      chrome.storage.local.set({ memos }, () => {
-        chrome.runtime.sendMessage({
-          action: "memoSaved",
-          memo
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.get(["memos"], (result) => {
+        const memos = result.memos || [];
+        memos.unshift(memo);
+        chrome.storage.local.set({ memos }, () => {
+          chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs && tabs.length > 0) {
+              try {
+                chrome.tabs.sendMessage(tabs[0].id, { action: "memoSaved" });
+              } catch (error) {
+                console.error("Failed to notify content script:", error);
+              }
+            }
+            chrome.runtime.sendMessage({ action: "memoSaved" });
+            resolve();
+          });
         });
-        console.log("Memo saved successfully");
       });
     });
   } catch (error) {
