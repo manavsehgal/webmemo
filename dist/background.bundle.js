@@ -1879,6 +1879,11 @@ var anthropicClient = null;
 chrome.action.onClicked.addListener((tab) => {
   chrome.sidePanel.open({ tabId: tab.id });
 });
+function sanitizeForJson(text) {
+  if (typeof text !== "string")
+    return text;
+  return text.replace(/[\u0000-\u001F\u007F-\u009F]/g, "").replace(/\\(?!["\\/bfnrtu])/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
+}
 async function processWithClaude(content, url, tags) {
   if (!anthropicClient) {
     anthropicClient = new Anthropic({
@@ -1891,7 +1896,7 @@ async function processWithClaude(content, url, tags) {
     description: tag.description || `Content related to ${tag.name || tag}`
   }));
   console.log("Available tags for classification:", formattedTags);
-  const systemPrompt = `You are an AI assistant helping to analyze web content. 
+  const systemPrompt = `You are an AI assistant helping to analyze web content. Your response must be a valid JSON object with no additional text or formatting.
 
 Source Website Information:
 - Domain: ${domain}
@@ -1900,26 +1905,19 @@ Source Website Information:
 Your task is to:
 1. Generate a concise but descriptive title for the content
 2. Create a brief summary (2-3 sentences)
-3. Based on the content type:
-   - If it's structured data: Convert to clean JSON format
-   - If it's narrative content: Create a well-formatted narrative version
-4. MOST IMPORTANTLY: Select exactly one tag from these options that best matches the content:
+3. If the content has a clear structure, extract the data and convert it to clean JSON format
+4. MOST IMPORTANTLY: Create a narrative version which effectively conveys the entire content. This should not be a summary, but an articulately comprehensive version of the content.
+5. Select exactly one tag from these options that best matches the content:
 ${formattedTags.map((tag) => `- ${tag.name}: ${tag.description}`).join("\n")}
 - Untagged: Content that doesn't clearly match any existing tag.
 
-CRITICAL INSTRUCTIONS FOR TAG SELECTION:
-- You MUST choose exactly one tag
-- The selectedTag field in your response MUST be a string that exactly matches one of the tag names listed above
-- If no tag clearly matches, use "Untagged"
-- Do not create new tags or modify existing tag names
-
-Respond with this exact JSON structure:
+CRITICAL: Your response must be EXACTLY in this format with no additional text or formatting:
 {
     "title": "your generated title",
     "summary": "your generated summary",
-    "narrative": "your narrative version if applicable",
+    "narrative": "your narrative version",
     "selectedTag": "EXACT_MATCHING_TAG_NAME",
-    "structuredData": "your structured data if applicable"
+    "structuredData": null
 }`;
   try {
     console.log("Sending prompt to Claude with tags:", formattedTags.map((t) => t.name));
@@ -1935,21 +1933,45 @@ Respond with this exact JSON structure:
       ]
     });
     try {
-      const parsedResponse = JSON.parse(response.content[0].text);
-      console.log("Claude response:", parsedResponse);
-      const validTags = [...formattedTags.map((t) => t.name), "Untagged"];
-      if (!validTags.includes(parsedResponse.selectedTag)) {
-        console.warn("Invalid tag selected:", parsedResponse.selectedTag);
-        parsedResponse.selectedTag = "Untagged";
+      console.log("Raw Claude response:", response.content[0].text);
+      let cleanedText2 = response.content[0].text.replace(/```json\n?|\n?```/g, "").replace(/^\s*\n/gm, "").trim();
+      console.log("Cleaned text:", cleanedText2);
+      if (!cleanedText2.startsWith("{") || !cleanedText2.endsWith("}")) {
+        throw new Error("Response is not a valid JSON object");
       }
-      return parsedResponse;
+      const parsedResponse = JSON.parse(cleanedText2);
+      const requiredFields = ["title", "summary", "narrative", "selectedTag"];
+      for (const field of requiredFields) {
+        if (!(field in parsedResponse)) {
+          throw new Error(`Missing required field: ${field}`);
+        }
+        if (typeof parsedResponse[field] !== "string") {
+          throw new Error(`Field ${field} must be a string`);
+        }
+      }
+      const sanitizedResponse = {
+        title: sanitizeForJson(parsedResponse.title),
+        summary: sanitizeForJson(parsedResponse.summary),
+        narrative: sanitizeForJson(parsedResponse.narrative),
+        selectedTag: parsedResponse.selectedTag,
+        structuredData: parsedResponse.structuredData || null
+      };
+      const validTags = [...formattedTags.map((t) => t.name), "Untagged"];
+      if (!validTags.includes(sanitizedResponse.selectedTag)) {
+        console.warn("Invalid tag selected:", sanitizedResponse.selectedTag);
+        sanitizedResponse.selectedTag = "Untagged";
+      }
+      return sanitizedResponse;
     } catch (e) {
       console.error("Failed to parse Claude response:", e);
+      console.error("Response text:", response.content[0].text);
+      console.error("Cleaned text:", cleanedText);
       return {
         title: "Error Processing Content",
         summary: "Failed to parse the content into the expected format.",
-        narrative: response.content[0].text,
-        selectedTag: "Untagged"
+        narrative: sanitizeForJson(response.content[0].text),
+        selectedTag: "Untagged",
+        structuredData: null
       };
     }
   } catch (error) {
@@ -1971,6 +1993,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     chrome.storage.local.set({ anthropicApiKey: request.apiKey });
     sendResponse({ success: true });
+  } else if (request.action === "chatMessage") {
+    if (!anthropicClient) {
+      sendResponse({
+        success: false,
+        error: "Anthropic API key not set. Please set your API key first."
+      });
+      return true;
+    }
+    const systemMessage = request.messages.find((m) => m.role === "system")?.content;
+    const chatMessages = request.messages.filter((m) => m.role !== "system");
+    anthropicClient.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 4096,
+      system: systemMessage,
+      messages: chatMessages
+    }).then((response) => {
+      sendResponse({
+        success: true,
+        reply: response.content[0].text
+      });
+    }).catch((error) => {
+      console.error("Chat API error:", error);
+      sendResponse({
+        success: false,
+        error: error.message
+      });
+    });
+    return true;
   }
 });
 chrome.storage.local.get(["anthropicApiKey"], (result) => {

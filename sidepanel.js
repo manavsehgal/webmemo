@@ -9,14 +9,26 @@ const memoDetail = document.getElementById('memoDetail');
 let isHighlightMode = false;
 let currentMemo = null;
 
+// Chat functionality
+let currentChatTag = null;
+let chatMessages = [];
+
+// Initialize saved chats
+let savedChats = [];
+const saveChatButton = document.getElementById('saveChatButton');
+
+// Add current filter state
+let currentTagFilter = null;
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     initializeExtension();
     
     // Add click handler for memos button
     memosButton.addEventListener('click', () => {
-        // Hide tags panel
+        // Hide other panels
         document.getElementById('tagsPanel').classList.add('hidden');
+        document.getElementById('chatPanel').classList.add('hidden');
         
         // If in detail view, go back to list
         memoDetailView.classList.add('hidden');
@@ -37,6 +49,67 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
+
+    // Add click handler for chat button
+    document.getElementById('chatButton').addEventListener('click', () => {
+        // Hide other panels
+        document.getElementById('tagsPanel').classList.add('hidden');
+        document.getElementById('memoListView').classList.add('hidden');
+        document.getElementById('memoDetailView').classList.add('hidden');
+        
+        // Show chat panel
+        document.getElementById('chatPanel').classList.remove('hidden');
+        document.getElementById('chatTagSelection').classList.remove('hidden');
+        document.getElementById('chatInterface').classList.add('hidden');
+        
+        // Initialize chat tags
+        initializeChatTags();
+        
+        // Reset capture mode if active
+        if (isHighlightMode) {
+            resetMemoButton();
+            chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+                try {
+                    await chrome.tabs.sendMessage(tabs[0].id, {
+                        action: 'toggleHighlightMode',
+                        enabled: false
+                    });
+                } catch (error) {
+                    console.error('Failed to disable highlight mode:', error);
+                }
+            });
+        }
+    });
+
+    // Add save button handler
+    saveChatButton.addEventListener('click', saveCurrentChat);
+
+    // Display saved chats
+    displaySavedChats();
+
+    // Add source toggle handler
+    const sourceToggle = document.getElementById('sourceToggle');
+    if (sourceToggle) {
+        sourceToggle.addEventListener('change', async () => {
+            if (currentChatTag && chatMessages.length > 0) {
+                const result = await chrome.storage.local.get(['memos']);
+                const memos = result.memos || [];
+                const taggedMemos = memos.filter(memo => memo.tag === currentChatTag.name);
+                
+                // Update token count before creating system message
+                updateTokenCount(taggedMemos, sourceToggle.checked);
+                
+                await createSystemMessage(taggedMemos);
+                
+                // Add a system notification in the chat
+                addChatMessage('assistant', 
+                    sourceToggle.checked ? 
+                    "I'm now using the original source content of the memos for our conversation." :
+                    "I'm now using the processed narratives and structured data from the memos for our conversation."
+                );
+            }
+        });
+    }
 });
 
 // Show status update
@@ -57,10 +130,8 @@ function showStatus(status, message = '') {
             statusText.textContent = 'Selection Mode';
             statusSubtext.textContent = 'Click any content to capture';
             statusSubtext.classList.remove('hidden');
-            selectionGuide.classList.remove('hidden');
-            setTimeout(() => {
-                selectionGuide.classList.remove('translate-y-2', 'opacity-0');
-            }, 50);
+            // Remove selectionGuide display
+            selectionGuide.classList.add('hidden');
             break;
         case 'selected':
             statusIcon.innerHTML = `<svg class="text-green-500" viewBox="0 0 20 20" fill="currentColor">
@@ -260,6 +331,7 @@ function resetMemoButton() {
     memoButton.classList.remove('bg-red-500', 'bg-gray-400', 'cursor-not-allowed');
     memoButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
     document.getElementById('selectionGuide').classList.add('hidden');
+    hideStatus(); // Hide the status notification
 }
 
 // Toggle highlight mode
@@ -314,9 +386,54 @@ function loadMemos() {
     });
 }
 
-// Delete memo
+// Show delete confirmation dialog
+async function showDeleteConfirmation(message) {
+    const dialog = document.createElement('div');
+    dialog.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    dialog.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4 space-y-4">
+            <div class="flex justify-center mb-4">
+                <img src="icons/webmemo-logo-128.png" alt="WebMemo Logo" class="w-32 h-32">
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 text-center">Delete Confirmation</h3>
+            <p class="text-sm text-gray-600 text-center">${message}</p>
+            <div class="flex justify-center space-x-3 mt-4">
+                <button class="cancel-delete px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200">
+                    Cancel
+                </button>
+                <button class="confirm-delete px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors duration-200">
+                    Delete
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(dialog);
+    
+    return new Promise((resolve) => {
+        dialog.querySelector('.cancel-delete').addEventListener('click', () => {
+            document.body.removeChild(dialog);
+            resolve(false);
+        });
+        
+        dialog.querySelector('.confirm-delete').addEventListener('click', () => {
+            document.body.removeChild(dialog);
+            resolve(true);
+        });
+        
+        dialog.addEventListener('click', (e) => {
+            if (e.target === dialog) {
+                document.body.removeChild(dialog);
+                resolve(false);
+            }
+        });
+    });
+}
+
+// Delete memo with custom confirmation dialog
 async function deleteMemo(memoId) {
-    if (!confirm('Are you sure you want to delete this memo?')) return;
+    const confirmed = await showDeleteConfirmation('Are you sure you want to delete this memo? This action cannot be undone.');
+    if (!confirmed) return;
     
     try {
         const result = await chrome.storage.local.get(['memos']);
@@ -387,10 +504,10 @@ async function updateTagCounts() {
     }
 }
 
-// Create tag element with count
+// Create tag element with count and click handler
 function createTagElement(tag) {
     const tagElement = document.createElement('div');
-    tagElement.className = `group flex items-start space-x-3 p-3 bg-${tag.color}-50 rounded-lg`;
+    tagElement.className = `group flex items-start space-x-3 p-3 bg-${tag.color}-50 rounded-lg hover:bg-${tag.color}-100 transition-colors duration-200`;
     tagElement.setAttribute('data-tag-name', tag.name);
     tagElement.innerHTML = `
         <div class="flex-shrink-0">
@@ -406,7 +523,7 @@ function createTagElement(tag) {
                 </div>
                 <button class="text-${tag.color}-400 hover:text-${tag.color}-600 delete-tag">
                     <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
                     </svg>
                 </button>
             </div>
@@ -414,73 +531,172 @@ function createTagElement(tag) {
         </div>
     `;
 
+    // Add click handler for tag filtering
+    tagElement.addEventListener('click', (e) => {
+        // Ignore if delete button was clicked
+        if (!e.target.closest('.delete-tag')) {
+            const count = parseInt(tagElement.querySelector('.tag-count').textContent);
+            if (count > 0) {
+                tagElement.classList.add('cursor-pointer');
+                filterMemosByTag(tag.name);
+            }
+        }
+    });
+
+    // Update cursor style based on memo count
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.target.classList.contains('tag-count')) {
+                const count = parseInt(mutation.target.textContent);
+                if (count > 0) {
+                    tagElement.classList.add('cursor-pointer');
+                } else {
+                    tagElement.classList.remove('cursor-pointer');
+                }
+            }
+        });
+    });
+
+    observer.observe(tagElement.querySelector('.tag-count'), { 
+        characterData: true, 
+        childList: true,
+        subtree: true 
+    });
+
     // Add delete functionality
     const deleteButton = tagElement.querySelector('.delete-tag');
     deleteButton.addEventListener('click', async () => {
-        if (confirm('Are you sure you want to delete this tag? All memos with this tag will be set to Untagged.')) {
-            try {
-                console.log('Deleting tag:', tag.name);
-                
-                // Update memos to set deleted tag to Untagged
-                const result = await chrome.storage.local.get(['memos', 'tags']);
-                const memos = result.memos || [];
-                console.log('Before update - Memos:', memos);
-                
-                const updatedMemos = memos.map(memo => {
-                    if (memo.tag === tag.name) {
-                        console.log('Updating memo tag from', memo.tag, 'to Untagged');
-                        return { ...memo, tag: 'Untagged' };
-                    }
-                    return memo;
-                });
-                console.log('After update - Memos:', updatedMemos);
+        const confirmed = await showDeleteConfirmation('Are you sure you want to delete this tag? All memos with this tag will be set to Untagged.');
+        if (!confirmed) return;
 
-                // Remove tag from storage
-                const tags = result.tags || [];
-                const updatedTags = tags.filter(t => t.name !== tag.name);
-
-                // Save updates
-                await chrome.storage.local.set({ 
-                    tags: updatedTags,
-                    memos: updatedMemos
-                });
-                
-                // Verify storage update
-                const verifyResult = await chrome.storage.local.get(['memos']);
-                console.log('Storage verification - Memos:', verifyResult.memos);
-                
-                tagElement.remove();
-                showStatus('success', 'Tag deleted', 'The tag has been removed');
-                
-                // Force a complete refresh of the UI
-                await updateTagCounts();
-                
-                // Force reload memos from storage and refresh display
-                const refreshResult = await chrome.storage.local.get(['memos']);
-                await displayMemoList(refreshResult.memos || []);
-                
-                // Update memo detail view if needed
-                if (!memoDetailView.classList.contains('hidden') && currentMemo && currentMemo.tag === tag.name) {
-                    currentMemo.tag = 'Untagged';
-                    await showMemoDetail(currentMemo, updatedTags);
+        try {
+            console.log('Deleting tag:', tag.name);
+            
+            // Update memos to set deleted tag to Untagged
+            const result = await chrome.storage.local.get(['memos', 'tags']);
+            const memos = result.memos || [];
+            console.log('Before update - Memos:', memos);
+            
+            const updatedMemos = memos.map(memo => {
+                if (memo.tag === tag.name) {
+                    console.log('Updating memo tag from', memo.tag, 'to Untagged');
+                    return { ...memo, tag: 'Untagged' };
                 }
-                
-            } catch (error) {
-                console.error('Error during tag deletion:', error);
-                showStatus('error', 'Failed to delete tag');
+                return memo;
+            });
+            console.log('After update - Memos:', updatedMemos);
+
+            // Remove tag from storage
+            const tags = result.tags || [];
+            const updatedTags = tags.filter(t => t.name !== tag.name);
+
+            // Save updates
+            await chrome.storage.local.set({ 
+                tags: updatedTags,
+                memos: updatedMemos
+            });
+            
+            // Verify storage update
+            const verifyResult = await chrome.storage.local.get(['memos']);
+            console.log('Storage verification - Memos:', verifyResult.memos);
+            
+            tagElement.remove();
+            showStatus('success', 'Tag deleted', 'The tag has been removed');
+            
+            // Force a complete refresh of the UI
+            await updateTagCounts();
+            
+            // Force reload memos from storage and refresh display
+            const refreshResult = await chrome.storage.local.get(['memos']);
+            await displayMemoList(refreshResult.memos || []);
+            
+            // Update memo detail view if needed
+            if (!memoDetailView.classList.contains('hidden') && currentMemo && currentMemo.tag === tag.name) {
+                currentMemo.tag = 'Untagged';
+                await showMemoDetail(currentMemo, updatedTags);
             }
+            
+        } catch (error) {
+            console.error('Error during tag deletion:', error);
+            showStatus('error', 'Failed to delete tag');
         }
     });
 
     return tagElement;
 }
 
+// Filter memos by tag
+async function filterMemosByTag(tagName) {
+    const result = await chrome.storage.local.get(['memos']);
+    const memos = result.memos || [];
+    
+    currentTagFilter = tagName;
+    const filteredMemos = memos.filter(memo => memo.tag === tagName);
+    
+    // Show notification
+    showStatus('success', `Showing ${filteredMemos.length} memos tagged as "${tagName}"`);
+    
+    // Switch to memos list view and display filtered memos
+    document.getElementById('tagsPanel').classList.add('hidden');
+    document.getElementById('memoListView').classList.remove('hidden');
+    displayMemoList(filteredMemos);
+}
+
+// Update memos button click handler to clear filter
+memosButton.addEventListener('click', async () => {
+    // Clear filter
+    currentTagFilter = null;
+    
+    // Hide other panels
+    document.getElementById('tagsPanel').classList.add('hidden');
+    document.getElementById('chatPanel').classList.add('hidden');
+    
+    // If in detail view, go back to list
+    memoDetailView.classList.add('hidden');
+    memoListView.classList.remove('hidden');
+    
+    // Show all memos
+    const result = await chrome.storage.local.get(['memos']);
+    displayMemoList(result.memos || []);
+    
+    // Show notification if we cleared a filter
+    if (currentTagFilter) {
+        showStatus('success', 'Showing all memos');
+    }
+    
+    // Reset capture mode if active
+    if (isHighlightMode) {
+        resetMemoButton();
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+            try {
+                await chrome.tabs.sendMessage(tabs[0].id, {
+                    action: 'toggleHighlightMode',
+                    enabled: false
+                });
+            } catch (error) {
+                console.error('Failed to disable highlight mode:', error);
+            }
+        });
+    }
+});
+
 // Display memo list
 async function displayMemoList(memos) {
     const result = await chrome.storage.local.get(['tags']);
     const tags = result.tags || [];
     console.log('displayMemoList tags:', tags);
-    memoListView.innerHTML = '';
+    
+    // Keep the title and add a container for memo items
+    const titleHtml = `
+        <div class="flex justify-between items-center mb-2">
+            <h2 class="text-lg font-semibold text-gray-800">Memos</h2>
+        </div>
+    `;
+    const memoItemsContainer = document.createElement('div');
+    memoItemsContainer.className = 'space-y-4';
+    
+    memoListView.innerHTML = titleHtml;
+    memoListView.appendChild(memoItemsContainer);
     
     for (const memo of memos) {
         const tagStyle = await getTagStyle(memo.tag || 'Untagged');
@@ -524,7 +740,7 @@ async function displayMemoList(memos) {
             deleteMemo(memo.id);
         });
         
-        memoListView.appendChild(memoItem);
+        memoItemsContainer.appendChild(memoItem);
     }
 }
 
@@ -721,7 +937,11 @@ async function showMemoDetail(memo, tags) {
     }
     
     if (memo.structuredData) {
-        jsonDiv.textContent = JSON.stringify(memo.structuredData, null, 2);
+        // Ensure we're working with an object
+        const dataToDisplay = typeof memo.structuredData === 'string' 
+            ? JSON.parse(memo.structuredData) 
+            : memo.structuredData;
+        jsonDiv.textContent = JSON.stringify(dataToDisplay, null, 2);
         jsonDiv.classList.remove('hidden');
     } else {
         jsonDiv.classList.add('hidden');
@@ -858,6 +1078,7 @@ async function loadTags() {
 document.getElementById('tagsButton').addEventListener('click', async () => {
     document.getElementById('memoListView').classList.add('hidden');
     document.getElementById('memoDetailView').classList.add('hidden');
+    document.getElementById('chatPanel').classList.add('hidden');
     document.getElementById('tagsPanel').classList.remove('hidden');
     await loadTags();
     updateTagCounts();
@@ -908,4 +1129,439 @@ document.getElementById('saveNewTag').addEventListener('click', async () => {
     document.getElementById('addTagForm').classList.add('hidden');
 
     showStatus('success', 'Tag created', 'New tag has been added');
-}); 
+});
+
+// Initialize chat interface
+async function initializeChatTags() {
+    const result = await chrome.storage.local.get(['memos', 'tags']);
+    const memos = result.memos || [];
+    const tags = result.tags || [];
+    const tagsList = document.getElementById('chatTagsList');
+    tagsList.innerHTML = '';
+
+    // Count memos for each tag
+    const counts = memos.reduce((acc, memo) => {
+        const tag = memo.tag || 'Untagged';
+        acc[tag] = (acc[tag] || 0) + 1;
+        return acc;
+    }, {});
+
+    // Create tag pills for tags with memos
+    tags.forEach(tag => {
+        const count = counts[tag.name] || 0;
+        if (count > 0) {
+            const tagPill = document.createElement('button');
+            tagPill.className = `chat-tag-pill flex items-center space-x-2 px-3 py-1.5 bg-${tag.color}-100 text-${tag.color}-700 rounded-full hover:bg-${tag.color}-200 transition-colors duration-200`;
+            tagPill.innerHTML = `
+                <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                    ${tag.icon}
+                </svg>
+                <span>${tag.name}</span>
+                <span class="bg-${tag.color}-200 text-${tag.color}-800 text-xs px-2 py-0.5 rounded-full">${count}</span>
+            `;
+            tagPill.addEventListener('click', () => selectChatTag(tag));
+            tagsList.appendChild(tagPill);
+        }
+    });
+}
+
+// Select a tag for chat
+async function selectChatTag(tag) {
+    currentChatTag = tag;
+    const result = await chrome.storage.local.get(['memos']);
+    const memos = result.memos || [];
+    
+    // Filter memos by tag
+    const taggedMemos = memos.filter(memo => memo.tag === tag.name);
+    
+    // Show chat interface
+    document.getElementById('chatTagSelection').classList.add('hidden');
+    document.getElementById('chatInterface').classList.remove('hidden');
+    
+    // Set chat intro
+    document.getElementById('chatIntro').textContent = 
+        `I am ready to chat about memos tagged as ${tag.name} (${tag.description})...`;
+    
+    // Reset chat
+    chatMessages = [];
+    document.getElementById('chatMessages').innerHTML = '';
+    
+    // Reset source toggle and update token count
+    const sourceToggle = document.getElementById('sourceToggle');
+    sourceToggle.checked = false;
+    updateTokenCount(taggedMemos, false);
+    
+    // Create system message
+    await createSystemMessage(taggedMemos);
+}
+
+// Create system message based on toggle state
+async function createSystemMessage(taggedMemos) {
+    const useSource = document.getElementById('sourceToggle').checked;
+    
+    // Create memo context based on toggle state
+    const memoContext = taggedMemos.map((memo, index) => {
+        if (useSource) {
+            return `
+                [Memo ${index + 1}]
+                Title: ${memo.title}
+                Source Content: ${memo.sourceHtml}
+                URL: ${memo.url}
+            `;
+        } else {
+            return `
+                [Memo ${index + 1}]
+                Title: ${memo.title}
+                Narrative: ${memo.narrative}
+                Structured Data: ${JSON.stringify(memo.structuredData)}
+            `;
+        }
+    }).join('\n\n');
+
+    const systemMessage = `You are a helpful assistant with access to a collection of memos tagged as "${currentChatTag.name}". 
+    When responding to user queries, prioritize information from these memos:
+    
+    ${memoContext}
+    
+    ${useSource ? `You are now working with the original source content of the memos. Use this raw content to provide detailed, accurate responses based on the original material.` : `You are working with processed narratives and structured data from the memos. Use this curated content to provide focused, organized responses.`}
+    
+    You can also use your general knowledge to provide additional context and insights beyond what's in the memos.
+    Always be clear when you're referencing memo content versus providing supplementary information.
+    
+    When you reference information from a memo, cite it using its title in square brackets like this: [Title of Memo].
+    If you reference multiple memos, cite each one where its information is used.
+    Always cite memos when you use their information in your response.`;
+
+    // Update chat messages with new system message
+    chatMessages = chatMessages.filter(msg => msg.role !== 'system');
+    chatMessages.unshift({ role: 'system', content: systemMessage });
+}
+
+// Add a message to the chat
+function addChatMessage(role, content) {
+    const messagesContainer = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'chat-message mb-4';
+
+    if (role === 'user') {
+        messageDiv.className += ' flex justify-end';
+        messageDiv.innerHTML = `
+            <div class="max-w-[80%] bg-blue-500 text-white px-4 py-2 rounded-lg rounded-tr-none">
+                <p class="text-sm">${content}</p>
+            </div>
+        `;
+    } else if (role === 'assistant') {
+        // Extract memo citations from the content
+        const citedMemos = [];
+        const contentWithLinks = content.replace(/\[(.*?)\]/g, (match, title) => {
+            if (!citedMemos.includes(title)) {
+                citedMemos.push(title);
+            }
+            return match;
+        });
+        
+        messageDiv.innerHTML = `
+            <div class="bg-white rounded-lg shadow p-4">
+                <p class="text-sm text-gray-700 whitespace-pre-wrap">${contentWithLinks}</p>
+                ${citedMemos.length > 0 ? `
+                    <div class="mt-2 pt-2 border-t border-gray-200">
+                        <p class="text-xs font-semibold text-gray-600 mb-2">Memos cited:</p>
+                        <div class="space-y-1.5">
+                            ${citedMemos.map((title, index) => `
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-xs text-gray-500">${index + 1}.</span>
+                                    <button class="memo-citation text-xs text-blue-600 hover:text-blue-800 hover:underline text-left flex-1" 
+                                            data-memo-title="${title.replace(/"/g, '&quot;')}">${title}</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        // Add click handlers for memo citations
+        const citationButtons = messageDiv.querySelectorAll('.memo-citation');
+        citationButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const title = button.dataset.memoTitle;
+                showMemoByTitle(title);
+            });
+        });
+
+        // Show save button after first assistant response
+        const saveButton = document.getElementById('saveChatButton');
+        saveButton.classList.remove('hidden');
+        saveButton.classList.add('flex');  // Make it flex to align icon and text
+    }
+
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Function to show memo by title
+async function showMemoByTitle(title) {
+    const result = await chrome.storage.local.get(['memos']);
+    const memos = result.memos || [];
+    const memo = memos.find(m => m.title === title);
+    if (memo) {
+        // Hide chat interface
+        document.getElementById('chatPanel').classList.add('hidden');
+        // Show memo detail
+        showMemoDetail(memo);
+    }
+}
+
+// Make showMemoByTitle available to onclick handlers
+window.showMemoByTitle = showMemoByTitle;
+
+// Chat input handlers
+document.addEventListener('DOMContentLoaded', () => {
+    // Remove send button event listener since we removed the button
+    const sendButton = document.getElementById('sendMessage');
+    if (sendButton) {
+        sendButton.remove();
+    }
+
+    // Update chat input styling and behavior
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+        chatInput.style.minHeight = '4.5rem';
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        chatInput.addEventListener('input', function() {
+            this.style.height = '4.5rem';
+            this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+        });
+    }
+});
+
+// Initialize chat when opening chat panel
+document.getElementById('chatButton').addEventListener('click', () => {
+    // Hide other panels
+    document.getElementById('tagsPanel').classList.add('hidden');
+    document.getElementById('memoListView').classList.add('hidden');
+    document.getElementById('memoDetailView').classList.add('hidden');
+    
+    // Show chat panel
+    document.getElementById('chatPanel').classList.remove('hidden');
+    document.getElementById('chatTagSelection').classList.remove('hidden');
+    document.getElementById('chatInterface').classList.add('hidden');
+    
+    // Initialize chat tags
+    initializeChatTags();
+    
+    // Reset capture mode if active
+    if (isHighlightMode) {
+        resetMemoButton();
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+            try {
+                await chrome.tabs.sendMessage(tabs[0].id, {
+                    action: 'toggleHighlightMode',
+                    enabled: false
+                });
+            } catch (error) {
+                console.error('Failed to disable highlight mode:', error);
+            }
+        });
+    }
+});
+
+// Handle sending a message
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    if (!message || !currentChatTag) return;
+
+    // Clear input
+    input.value = '';
+    input.style.height = '4.5rem';
+
+    // Add user message
+    addChatMessage('user', message);
+    chatMessages.push({ role: 'user', content: message });
+
+    // Show typing indicator
+    document.getElementById('chatTypingIndicator').classList.remove('hidden');
+    input.disabled = true;  // Disable input while processing
+
+    try {
+        // Send message through background script
+        const response = await chrome.runtime.sendMessage({
+            action: 'chatMessage',
+            messages: chatMessages
+        });
+
+        if (!response.success) {
+            throw new Error(response.error || 'Failed to get response');
+        }
+
+        // Add assistant message
+        addChatMessage('assistant', response.reply);
+        chatMessages.push({ role: 'assistant', content: response.reply });
+
+    } catch (error) {
+        console.error('Chat error:', error);
+        addChatMessage('assistant', 'I apologize, but I encountered an error. Please try again.');
+        if (error.message.includes('API key not set')) {
+            checkApiKey();
+        }
+    } finally {
+        // Hide typing indicator
+        document.getElementById('chatTypingIndicator').classList.add('hidden');
+        input.disabled = false;  // Re-enable input
+    }
+}
+
+// Make sendMessage available to onclick handlers
+window.sendMessage = sendMessage;
+
+// Save current chat
+async function saveCurrentChat() {
+    if (chatMessages.length < 2) return; // Need at least one user message and one response
+
+    const firstUserMessage = chatMessages.find(m => m.role === 'user');
+    const title = firstUserMessage.content.substring(0, 50) + (firstUserMessage.content.length > 50 ? '...' : '');
+    
+    const savedChat = {
+        id: Date.now(),
+        title,
+        tag: currentChatTag,
+        timestamp: new Date().toISOString(),
+        messages: [...chatMessages]
+    };
+
+    // Save to storage
+    const result = await chrome.storage.local.get(['savedChats']);
+    const savedChats = result.savedChats || [];
+    savedChats.unshift(savedChat);
+    await chrome.storage.local.set({ savedChats });
+
+    // Clear current chat
+    chatMessages = [];
+    document.getElementById('chatMessages').innerHTML = '';
+    const saveButton = document.getElementById('saveChatButton');
+    saveButton.classList.add('hidden');
+    saveButton.classList.remove('flex');
+
+    // Show tag selection with updated saved chats
+    document.getElementById('chatInterface').classList.add('hidden');
+    document.getElementById('chatTagSelection').classList.remove('hidden');
+    
+    // Initialize chat tags and show saved chats
+    initializeChatTags();
+}
+
+// Display saved chats
+function displaySavedChats() {
+    const savedChatsList = document.getElementById('savedChatsList');
+    savedChatsList.innerHTML = '';
+
+    chrome.storage.local.get(['savedChats'], (result) => {
+        const savedChats = result.savedChats || [];
+        
+        if (savedChats.length === 0) {
+            savedChatsList.innerHTML = `
+                <div class="text-sm text-gray-500 italic">
+                    No saved chats yet
+                </div>
+            `;
+            return;
+        }
+        
+        savedChats.forEach(chat => {
+            const chatElement = document.createElement('div');
+            chatElement.className = 'bg-white rounded-lg shadow p-3 cursor-pointer hover:bg-gray-50 transition-colors duration-200';
+            chatElement.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div class="flex-grow">
+                        <h4 class="text-sm font-medium text-gray-800">${chat.title}</h4>
+                        <p class="text-xs text-gray-500 mt-1">
+                            ${new Date(chat.timestamp).toLocaleString()}
+                        </p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs px-2 py-1 rounded-full bg-${chat.tag.color}-100 text-${chat.tag.color}-700 whitespace-nowrap">
+                            ${chat.tag.name}
+                        </span>
+                        <button class="delete-chat text-gray-400 hover:text-red-500 p-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Add click handler for loading the chat (excluding delete button)
+            chatElement.addEventListener('click', (e) => {
+                if (!e.target.closest('.delete-chat')) {
+                    loadSavedChat(chat);
+                    document.getElementById('chatTagSelection').classList.add('hidden');
+                    document.getElementById('chatInterface').classList.remove('hidden');
+                }
+            });
+
+            // Add click handler for delete button
+            const deleteButton = chatElement.querySelector('.delete-chat');
+            deleteButton.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const confirmed = await showDeleteConfirmation('Are you sure you want to delete this saved chat?');
+                if (confirmed) {
+                    const result = await chrome.storage.local.get(['savedChats']);
+                    const savedChats = result.savedChats || [];
+                    const updatedChats = savedChats.filter(c => c.id !== chat.id);
+                    await chrome.storage.local.set({ savedChats: updatedChats });
+                    showStatus('success', 'Chat deleted');
+                    displaySavedChats();
+                }
+            });
+            
+            savedChatsList.appendChild(chatElement);
+        });
+    });
+}
+
+// Load a saved chat
+function loadSavedChat(chat) {
+    // Set current tag and messages
+    currentChatTag = chat.tag;
+    chatMessages = [...chat.messages];
+
+    // Display messages
+    const messagesContainer = document.getElementById('chatMessages');
+    messagesContainer.innerHTML = '';
+    chatMessages.forEach(message => {
+        if (message.role !== 'system') {
+            addChatMessage(message.role, message.content);
+        }
+    });
+
+    // Show save button
+    saveChatButton.classList.remove('hidden');
+}
+
+// Calculate total word count for memos
+function calculateMemosWordCount(memos, useSource = false) {
+    return memos.reduce((total, memo) => {
+        if (useSource) {
+            return total + countWords(memo.sourceHtml);
+        } else {
+            return total + countWords(memo.narrative) + 
+                   countWords(JSON.stringify(memo.structuredData));
+        }
+    }, 0);
+}
+
+// Update token count display
+function updateTokenCount(memos, useSource = false) {
+    const wordCount = calculateMemosWordCount(memos, useSource);
+    const tokenCount = Math.round(wordCount * 1.3);
+    const tokenCountElement = document.getElementById('tokenCount');
+    tokenCountElement.textContent = `This chat will cost around ${wordCount.toLocaleString()} words (${tokenCount.toLocaleString()} tokens)`;
+} 
