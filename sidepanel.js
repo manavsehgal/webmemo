@@ -1266,8 +1266,9 @@ async function initializeChatTags() {
 // Select a tag for chat
 async function selectChatTag(tag) {
     currentChatTag = tag;
-    const result = await chrome.storage.local.get(['memos']);
+    const result = await chrome.storage.local.get(['memos', 'savedChats']);
     const memos = result.memos || [];
+    const savedChats = result.savedChats || [];
     
     // Filter memos by tag
     const taggedMemos = memos.filter(memo => memo.tag === tag.name);
@@ -1291,6 +1292,71 @@ async function selectChatTag(tag) {
     
     // Create system message
     await createSystemMessage(taggedMemos);
+
+    // Filter and display saved chats for this tag
+    const taggedSavedChats = savedChats.filter(chat => chat.tag.name === tag.name);
+    if (taggedSavedChats.length > 0) {
+        const chatToolbar = document.querySelector('.chat-toolbar');
+        
+        // Clear any existing saved chats section
+        const existingSavedChats = chatToolbar.querySelector('.saved-chats-section');
+        if (existingSavedChats) {
+            existingSavedChats.remove();
+        }
+        
+        const savedChatsSection = document.createElement('div');
+        savedChatsSection.className = 'mt-4 pt-4 border-t saved-chats-section';
+        savedChatsSection.innerHTML = `
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">Previous Chats</h3>
+            <div class="space-y-2">
+                ${taggedSavedChats.map(chat => `
+                    <div class="flex items-center justify-between bg-white rounded-lg p-2 hover:bg-gray-50 transition-colors duration-200 cursor-pointer saved-chat-item">
+                        <div class="flex-grow">
+                            <p class="text-sm text-gray-800">${chat.title}</p>
+                            <p class="text-xs text-gray-500">${new Date(chat.timestamp).toLocaleString()}</p>
+                        </div>
+                        <button class="delete-saved-chat text-gray-400 hover:text-red-500 p-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        // Add click handlers for saved chats
+        savedChatsSection.querySelectorAll('.saved-chat-item').forEach((item, index) => {
+            item.addEventListener('click', (e) => {
+                if (!e.target.closest('.delete-saved-chat')) {
+                    loadSavedChat(taggedSavedChats[index]);
+                }
+            });
+        });
+
+        // Add click handlers for delete buttons
+        savedChatsSection.querySelectorAll('.delete-saved-chat').forEach((button, index) => {
+            button.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const confirmed = await showDeleteConfirmation('Are you sure you want to delete this saved chat?');
+                if (confirmed) {
+                    const result = await chrome.storage.local.get(['savedChats']);
+                    const savedChats = result.savedChats || [];
+                    const updatedChats = savedChats.filter(c => c.id !== taggedSavedChats[index].id);
+                    await chrome.storage.local.set({ savedChats: updatedChats });
+                    showStatus('success', 'Chat deleted');
+                    button.closest('.saved-chat-item').remove();
+                    
+                    // Remove the section if no more chats
+                    if (updatedChats.filter(chat => chat.tag.name === tag.name).length === 0) {
+                        savedChatsSection.remove();
+                    }
+                }
+            });
+        });
+
+        chatToolbar.appendChild(savedChatsSection);
+    }
 }
 
 // Create system message based on toggle state

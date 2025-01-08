@@ -17,3 +17,42 @@ Can one humble Chrome Extension solve all this? Drumroll… I think I have crack
 5. Click "Capture" to start capturing memos.
 6. Click "Chat" to start chatting with your memos.
 7. Click "Tags" to browse filtered memos.
+
+## Features
+
+### Content Capture
+- Intelligent text selection and capture from any webpage
+- Support for capturing partial content or entire pages
+- Automatic content processing and organization
+- Word count tracking for captured content
+
+### Smart Organization
+- Automatic tag generation for content categorization
+- Project-based organization of captured content
+- Flexible filtering and browsing by tags
+- Detailed memo view with metadata and source tracking
+
+### AI-Powered Analysis
+- Chat interface for interacting with your captured content
+- Project-specific conversations with AI
+- Choice between using source content or processed narratives
+- Token count optimization for AI interactions
+- Ability to save and revisit chat conversations
+
+### Privacy & Performance
+- Local storage of all memos for privacy and speed
+- Support for multiple AI providers (Anthropic, OpenAI)
+- Secure API key management
+
+### User Interface
+- Clean, modern side panel interface
+- Quick access through browser extension icon
+- Intuitive navigation between memos, tags, and chat
+- Visual feedback for content capture and processing
+- Dark mode support
+
+## Coming Soon
+- AWS integration capabilities for access to Amazon Bedrock managed models
+- Ollama integration for access models on local machine
+- OpenAI integration
+- Gemini integration
