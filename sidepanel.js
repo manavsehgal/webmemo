@@ -1474,8 +1474,11 @@ async function showMemoByTitle(title) {
     const memos = result.memos || [];
     const memo = memos.find(m => m.title === title);
     if (memo) {
-        // Hide chat interface
+        // Hide chat panel
         document.getElementById('chatPanel').classList.add('hidden');
+        // Show memo detail view and hide memo list view
+        document.getElementById('memoDetailView').classList.remove('hidden');
+        document.getElementById('memoListView').classList.add('hidden');
         // Show memo detail
         showMemoDetail(memo);
     }
