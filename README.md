@@ -228,3 +228,30 @@ This completes the loop. You can capture content, self-organize it, chat with it
 - Minimal external dependencies
 - Optimized bundle size
 
+## Future Roadmap
+
+*Note: These are just ideas and not necessarily in order of priority and not all will be implemented as right now I am only working on this over weekends. If you are interested in collaborating on this project, please reach out.*
+
+1. Multi-LLM Integration: Enable users to choose between OpenAI, Google, or run local models via Ollama for content processing and chat interactions.
+
+2. Extended Content Sources: Capture and process content from YouTube videos, Twitter threads, and other social media platforms directly within the extension.
+
+3. Rich Media Support: Process and analyze images, videos, and audio content, enabling comprehensive multi-media content capture and organization.
+
+4. Advanced Format Handling: Import and process content from markdown files, PDFs, and other document formats while preserving structure and formatting.
+
+5. Enhanced Content Analysis: Implement sentiment analysis, topic modeling, and advanced content categorization to provide deeper insights into captured content.
+
+6. Data Visualization: Generate interactive charts, graphs, and visual representations of content relationships and insights.
+
+7. Content Distribution: Share memos and insights via email, SMS, and other communication channels directly from the extension.
+
+8. Collaborative Features: Enable memo sharing and collaborative content organization among team members or research groups.
+
+9. Task Management Integration: Convert memos into actionable items like to-do lists, checklists, and project milestones.
+
+10. Calendar Integration: Create calendar events, schedule meetings, and set reminders based on memo content and insights.
+
+11. Automated Workflows: Implement AI agents that can execute tasks based on memo content, such as creating shopping lists or scheduling appointments.
+
+12. System Integration: Enable the extension to interact with system applications, creating spreadsheets, performing web searches, and managing files based on memo content and user objectives.
