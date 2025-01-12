@@ -3,195 +3,7 @@
 <head>
     <title>Web Memo</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <style>
-        .memo-list-item:hover {
-            background-color: #f3f4f6;
-        }
-        .highlight-mode {
-            cursor: crosshair !important;
-        }
-        .highlight-outline {
-            outline: 2px solid #34D399 !important;
-            outline-offset: 2px;
-            transition: outline-color 0.2s ease;
-        }
-        .status-badge {
-            transform: translateY(100%);
-            opacity: 0;
-            transition: all 0.3s ease;
-        }
-        .status-badge.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        .pulse {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        .chat-message {
-            opacity: 0;
-            transform: translateY(10px);
-            animation: message-fade-in 0.3s ease forwards;
-        }
-
-        @keyframes message-fade-in {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .chat-tag-pill {
-            transition: all 0.2s ease;
-        }
-
-        .chat-tag-pill:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .typing-dots div {
-            opacity: 0.6;
-        }
-
-        .animate-fade-in {
-            animation: fade-in 0.3s ease-out;
-        }
-
-        @keyframes fade-in {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        #chatMessages::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        #chatMessages::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        #chatMessages::-webkit-scrollbar-thumb {
-            background-color: rgba(156, 163, 175, 0.5);
-            border-radius: 3px;
-        }
-
-        #chatMessages::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(156, 163, 175, 0.7);
-        }
-
-        #chatInput::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        #chatInput::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        #chatInput::-webkit-scrollbar-thumb {
-            background-color: rgba(156, 163, 175, 0.5);
-            border-radius: 3px;
-        }
-
-        #chatInput::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(156, 163, 175, 0.7);
-        }
-
-        /* Updated typing indicator styles */
-        .typing-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            background-color: #f3f4f6;
-            border-radius: 12px;
-        }
-
-        .typing-dot {
-            width: 4px;
-            height: 4px;
-            background-color: #6b7280;
-            border-radius: 50%;
-            animation: typing-bounce 1.4s infinite;
-        }
-
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes typing-bounce {
-            0%, 60%, 100% { transform: translateY(0); }
-            30% { transform: translateY(-4px); }
-        }
-
-        .memo-citation {
-            display: inline;
-        }
-
-        .toggle-switch {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        .toggle-switch input[type="checkbox"] {
-            height: 0;
-            width: 0;
-            visibility: hidden;
-            position: absolute;
-        }
-
-        .toggle-slider {
-            width: 2.75rem;
-            height: 1.5rem;
-            background: #e5e7eb;
-            display: block;
-            border-radius: 100px;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-
-        .toggle-slider:after {
-            content: '';
-            position: absolute;
-            top: 0.125rem;
-            left: 0.125rem;
-            width: 1.25rem;
-            height: 1.25rem;
-            background: #fff;
-            border-radius: 100%;
-            transition: all 0.3s ease;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        input:checked + .toggle-slider {
-            background: #3b82f6;
-        }
-
-        input:checked + .toggle-slider:after {
-            left: calc(100% - 1.375rem);
-        }
-
-        input:focus + .toggle-slider {
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
-        }
-
-        .sticky-toolbar {
-            position: sticky;
-            top: 0;
-            z-index: 50;
-            background-color: white;
-        }
-    </style>
+    <link href="styles.css" rel="stylesheet">
 </head>
 <body class="bg-gray-50">
     <div class="container mx-auto">
@@ -294,7 +106,7 @@
                         </label>
                         <div id="tokenCount" class="text-xs text-gray-500 italic"></div>
                     </div>
-                    <div id="chatMessages" class="flex-1 overflow-y-auto space-y-4 pb-4">
+                    <div id="chatMessages" class="custom-scrollbar">
                         <!-- Messages will be added here dynamically -->
                     </div>
                     <div class="mt-4 pt-4">
@@ -306,9 +118,7 @@
                             </div>
                         </div>
                         <div class="relative">
-                            <textarea id="chatInput" 
-                                      class="w-full border rounded-t-lg border-b-0 px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                                      style="min-height: 4.5rem;"
+                            <textarea id="chatInput" class="custom-scrollbar" style="min-height: 4.5rem;"
                                       placeholder="Prompt your Memos here. Press Enter / Return for response."></textarea>
                             <div class="chat-toolbar flex items-center px-3 py-2 bg-gray-50 border border-t-0 rounded-b-lg">
                                 <button id="saveChatButton" class="hidden items-center space-x-1 text-xs text-gray-600 hover:text-blue-600 transition-colors duration-200">
