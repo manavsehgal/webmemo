@@ -1296,7 +1296,7 @@ async function selectChatTag(tag) {
     // Filter and display saved chats for this tag
     const taggedSavedChats = savedChats.filter(chat => chat.tag.name === tag.name);
     if (taggedSavedChats.length > 0) {
-        const chatToolbar = document.querySelector('.chat-toolbar');
+        const chatToolbar = document.querySelector('.saved-chats');
         
         // Clear any existing saved chats section
         const existingSavedChats = chatToolbar.querySelector('.saved-chats-section');
@@ -1305,7 +1305,7 @@ async function selectChatTag(tag) {
         }
         
         const savedChatsSection = document.createElement('div');
-        savedChatsSection.className = 'mt-4 pt-4 border-t saved-chats-section';
+        savedChatsSection.className = 'mt-4 pt-4 saved-chats-section';
         savedChatsSection.innerHTML = `
             <h3 class="text-sm font-semibold text-gray-700 mb-2">Previous Chats</h3>
             <div class="space-y-2">
