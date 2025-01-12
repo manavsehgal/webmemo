@@ -84,34 +84,61 @@ export async function loadTags() {
     
     // Add new tag form (hidden by default)
     const newTagForm = document.createElement('div');
-    newTagForm.id = 'newTagForm';
+    newTagForm.id = 'addTagForm';
     newTagForm.className = 'hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
     newTagForm.innerHTML = `
-        <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Add New Tag</h3>
-            <div class="space-y-4">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-900">Add New Tag</h3>
+                <button id="cancelAddTag" class="text-gray-400 hover:text-gray-500">
+                    <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-6">
                 <div>
-                    <label for="tagName" class="block text-sm font-medium text-gray-700">Name</label>
-                    <input type="text" id="tagName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <label for="tagName" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input type="text" id="tagName" 
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter tag name">
                 </div>
                 <div>
-                    <label for="tagDescription" class="block text-sm font-medium text-gray-700">Description</label>
-                    <input type="text" id="tagDescription" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <label for="tagDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea id="tagDescription" rows="3" 
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                        placeholder="Enter tag description"></textarea>
                 </div>
                 <div>
-                    <label for="tagColor" class="block text-sm font-medium text-gray-700">Color</label>
-                    <select id="tagColor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <option value="gray">Gray</option>
-                        <option value="red">Red</option>
-                        <option value="yellow">Yellow</option>
-                        <option value="green">Green</option>
-                        <option value="blue">Blue</option>
-                        <option value="indigo">Indigo</option>
-                        <option value="purple">Purple</option>
-                        <option value="pink">Pink</option>
-                    </select>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                    <div class="grid grid-cols-8 gap-2">
+                        <button class="color-option w-8 h-8 rounded-full bg-gray-500 hover:ring-2 hover:ring-offset-2 hover:ring-gray-500" data-color="gray"></button>
+                        <button class="color-option w-8 h-8 rounded-full bg-red-500 hover:ring-2 hover:ring-offset-2 hover:ring-red-500" data-color="red"></button>
+                        <button class="color-option w-8 h-8 rounded-full bg-yellow-500 hover:ring-2 hover:ring-offset-2 hover:ring-yellow-500" data-color="yellow"></button>
+                        <button class="color-option w-8 h-8 rounded-full bg-green-500 hover:ring-2 hover:ring-offset-2 hover:ring-green-500" data-color="green"></button>
+                        <button class="color-option w-8 h-8 rounded-full bg-blue-500 hover:ring-2 hover:ring-offset-2 hover:ring-blue-500" data-color="blue"></button>
+                        <button class="color-option w-8 h-8 rounded-full bg-indigo-500 hover:ring-2 hover:ring-offset-2 hover:ring-indigo-500" data-color="indigo"></button>
+                        <button class="color-option w-8 h-8 rounded-full bg-purple-500 hover:ring-2 hover:ring-offset-2 hover:ring-purple-500" data-color="purple"></button>
+                        <button class="color-option w-8 h-8 rounded-full bg-pink-500 hover:ring-2 hover:ring-offset-2 hover:ring-pink-500" data-color="pink"></button>
+                    </div>
                 </div>
-                <div class="flex justify-end space-x-3 mt-6">
+                <div>
+                    <label for="tagIcon" class="block text-sm font-medium text-gray-700 mb-1">Icon</label>
+                    <div class="relative">
+                        <input type="text" id="tagIconSearch" 
+                            class="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Search icons...">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <svg class="w-5 h-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div id="iconGrid" class="mt-2 grid grid-cols-6 gap-2 max-h-32 overflow-y-auto p-2 bg-gray-50 rounded-md">
+                        <!-- Icons will be populated here -->
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4 border-t">
                     <button id="cancelAddTag" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200">
                         Cancel
                     </button>
@@ -128,28 +155,90 @@ export async function loadTags() {
     // Add event listeners
     document.getElementById('addTagButton').addEventListener('click', () => {
         newTagForm.classList.remove('hidden');
+        populateIconGrid();
     });
+    
+    // Handle color selection
+    let selectedColor = 'gray';
+    newTagForm.querySelectorAll('.color-option').forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            selectedColor = button.dataset.color;
+            // Remove ring from all buttons and add to selected
+            newTagForm.querySelectorAll('.color-option').forEach(b => b.classList.remove('ring-2', 'ring-offset-2'));
+            button.classList.add('ring-2', 'ring-offset-2');
+        });
+    });
+
+    // Handle icon search and selection
+    let selectedIcon = predefinedTags[0].icon;
+    const iconSearch = document.getElementById('tagIconSearch');
+    iconSearch.addEventListener('input', () => {
+        populateIconGrid(iconSearch.value);
+    });
+
+    function populateIconGrid(searchTerm = '') {
+        const iconGrid = document.getElementById('iconGrid');
+        iconGrid.innerHTML = '';
+        
+        // Filter icons based on search term
+        const icons = [
+            { name: 'tag', path: predefinedTags[0].icon },
+            { name: 'book', path: '<path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />' },
+            { name: 'code', path: '<path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />' },
+            { name: 'search', path: '<path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />' },
+            { name: 'document', path: '<path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />' },
+            { name: 'chat', path: '<path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd" />' }
+        ];
+
+        const filteredIcons = icons.filter(icon => 
+            icon.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        filteredIcons.forEach(icon => {
+            const button = document.createElement('button');
+            button.className = `p-2 rounded hover:bg-gray-200 transition-colors duration-200 ${selectedIcon === icon.path ? 'bg-gray-200' : ''}`;
+            button.innerHTML = `
+                <svg class="w-6 h-6 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
+                    ${icon.path}
+                </svg>
+            `;
+            button.addEventListener('click', () => {
+                selectedIcon = icon.path;
+                // Update selected state
+                iconGrid.querySelectorAll('button').forEach(b => b.classList.remove('bg-gray-200'));
+                button.classList.add('bg-gray-200');
+            });
+            iconGrid.appendChild(button);
+        });
+    }
     
     document.getElementById('cancelAddTag').addEventListener('click', () => {
         newTagForm.classList.add('hidden');
-        document.getElementById('tagName').value = '';
-        document.getElementById('tagDescription').value = '';
-        document.getElementById('tagColor').value = 'gray';
+        resetForm();
     });
     
     document.getElementById('saveNewTag').addEventListener('click', async () => {
         const name = document.getElementById('tagName').value.trim();
         const description = document.getElementById('tagDescription').value.trim();
-        const color = document.getElementById('tagColor').value;
         
         if (name) {
-            await addNewTag(name, description, color);
+            await addNewTag(name, description, selectedColor, selectedIcon);
             newTagForm.classList.add('hidden');
-            document.getElementById('tagName').value = '';
-            document.getElementById('tagDescription').value = '';
-            document.getElementById('tagColor').value = 'gray';
+            resetForm();
         }
     });
+
+    function resetForm() {
+        document.getElementById('tagName').value = '';
+        document.getElementById('tagDescription').value = '';
+        document.getElementById('tagIconSearch').value = '';
+        selectedColor = 'gray';
+        selectedIcon = predefinedTags[0].icon;
+        newTagForm.querySelectorAll('.color-option').forEach(b => b.classList.remove('ring-2', 'ring-offset-2'));
+        newTagForm.querySelector('[data-color="gray"]').classList.add('ring-2', 'ring-offset-2');
+        populateIconGrid();
+    }
     
     // Update tag counts
     await updateTagCounts();
@@ -225,7 +314,7 @@ export async function createTagElement(tag) {
 }
 
 // Add new tag
-export async function addNewTag(name, description, color) {
+export async function addNewTag(name, description, color, icon) {
     const result = await chrome.storage.local.get(['tags']);
     const tags = result.tags || [];
     
@@ -240,7 +329,7 @@ export async function addNewTag(name, description, color) {
         name,
         description,
         color,
-        icon: predefinedTags[0].icon // Use default icon for now
+        icon
     };
     
     // Add to tags array and save
