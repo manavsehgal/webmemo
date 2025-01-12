@@ -30,12 +30,13 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "type": "module"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["content.js"],
+      "resources": ["content.js", "status.js"],
       "matches": ["<all_urls>"]
     }
   ],
