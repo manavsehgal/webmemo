@@ -35,7 +35,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["modules/*", "icons/*"],
+      "resources": ["content.js"],
       "matches": ["<all_urls>"]
     }
   ],
