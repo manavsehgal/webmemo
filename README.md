@@ -6,6 +6,13 @@ Multi-tasking with AI superpowers. Capture, self-organize, and chat with content
 ## User Journey
 Web Memo is a Chrome extension that allows you to capture, self-organize, and chat with content as you browse the web. You can use Web Memo to organize your shopping, entertainment, learning, research, and more.
 
+### Investing Workflow
+
+You can capture entire transcripts of podcasts and YouTube videos. Web Memo will automatically summarize the content and generate a narrative version of it. You can create a project for your investment thesis and capture content related to it. You can chat with your memos by investment thesis project tag. The chat will be context aware and use the project description or objective along with locally stored memo narratives and structured data to provide fast, accurate, and relevant responses. You can save important chat conversations and expand on them later. There is also an option to chat with the original content source of the memos. The chat responses include clickable links to cited memos. Once inside memo details view, you can click to open the original content source in a new browser tab.
+
+![Web Memo Workflow](path/to/web-memo-workflow.png)
+
+### Shopping Workflow
 Let us say you are planning a birthday party for your 6 year old. As you search for toys and decorations to buy, you can capture the content you find on Amazon, Target, and other stores. You can also capture content from blogs, podcasts, and other websites. As you capture content, Web Memo will automatically categorize it into projects like Shopping, Toys, Party Planning, etc. Web Memo will also automatically summarize the content and generate a narrative version of it. If the content is product details with price, reviews, and other data about the product, Web Memo will extract that data and store it in a structured format.
 
 Your memos are stored locally in your browser, so they retrieved quickly and secure. You can also browse your captured memos filtered by project tags. So, you can resume your research anytime and start where you left off.
@@ -255,3 +262,4 @@ This completes the loop. You can capture content, self-organize it, chat with it
 11. Automated Workflows: Implement AI agents that can execute tasks based on memo content, such as creating shopping lists or scheduling appointments.
 
 12. System Integration: Enable the extension to interact with system applications, creating spreadsheets, performing web searches, and managing files based on memo content and user objectives.
+
