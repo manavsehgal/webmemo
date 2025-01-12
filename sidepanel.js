@@ -1,5 +1,8 @@
+// Import utility functions
+import { countWords, countJsonKeys, formatCount, showDeleteConfirmation } from './modules/utils.js';
 // Import tag functions
 import { 
+    getTagStyle, 
     initializeTags, 
     loadTags as loadTagsFromModule, 
     updateTagCounts,
@@ -9,12 +12,14 @@ import {
 } from './modules/tags.js';
 // Import chat functions
 import { 
+    updateTokenCount,
     displaySavedChats,
     loadSavedChat,
     saveCurrentChat as saveCurrentChatModule,
     sendMessage as sendMessageModule,
     createSystemMessage,
-    addChatMessage
+    addChatMessage,
+    selectChatTag as selectChatTagModule
 } from './modules/chat.js';
 // Import memo detail functions
 import { showMemoDetail } from './modules/memo-details.js';
@@ -43,13 +48,14 @@ let currentMemo = null;
 let currentChatTag = null;
 let chatMessages = [];
 
-// Initialize UI elements
+// Initialize saved chats
+let savedChats = [];
 const saveChatButton = document.getElementById('saveChatButton');
 
 // Add current filter state
 let currentTagFilter = null;
 
-// Initialize chat interface and other components
+// Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         // Load API keys from storage
@@ -97,16 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Add event listener for showing memo detail
         document.addEventListener('showMemoDetail', (event) => {
             const { memo, tags } = event.detail;
-            // Show memo detail view and hide other views
-            document.getElementById('memoDetailView').classList.remove('hidden');
-            document.getElementById('memoListView').classList.add('hidden');
-            document.getElementById('chatPanel').classList.add('hidden');
-            document.getElementById('tagsPanel').classList.add('hidden');
-            document.getElementById('settingsPanel').classList.add('hidden');
-            
-            // Update current memo and display it
-            currentMemo = memo;
-            showMemoDetail(memo, tags);
+            currentMemo = showMemoDetail(memo, tags);
         });
 
         // Add event listener for memo tag updates
@@ -118,63 +115,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             displayMemoList(updatedMemos);
         });
 
-        // Initialize chat interface
-        const chatInput = document.getElementById('chatInput');
-        if (chatInput) {
-            chatInput.style.minHeight = '4.5rem';
-            chatInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
-
-            chatInput.addEventListener('input', function() {
-                this.style.height = '4.5rem';
-                this.style.height = Math.min(this.scrollHeight, 160) + 'px';
-            });
-        }
-
-        // Add save button handler
-        saveChatButton.addEventListener('click', saveCurrentChat);
-
-        // Add source toggle handler
-        const sourceToggle = document.getElementById('sourceToggle');
-        if (sourceToggle) {
-            sourceToggle.addEventListener('change', async () => {
-                if (currentChatTag && chatMessages.length > 0) {
-                    const result = await chrome.storage.local.get(['memos']);
-                    const memos = result.memos || [];
-                    const taggedMemos = memos.filter(memo => memo.tag === currentChatTag.name);
-                    
-                    // Update token count before creating system message
-                    updateTokenCount(taggedMemos, sourceToggle.checked);
-                    
-                    chatMessages = await createSystemMessage(taggedMemos, currentChatTag, chatMessages);
-                    
-                    // Add a system notification in the chat
-                    addChatMessage('assistant', 
-                        sourceToggle.checked ? 
-                        "I'm now using the original source content of the memos for our conversation." :
-                        "I'm now using the processed narratives and structured data from the memos for our conversation."
-                    );
-                }
-            });
-        }
-
         // Load initial data
-        loadMemos((memos) => displayMemoList(memos, (memo, tags) => {
-            // Show memo detail view and hide other views
-            document.getElementById('memoDetailView').classList.remove('hidden');
-            document.getElementById('memoListView').classList.add('hidden');
-            document.getElementById('chatPanel').classList.add('hidden');
-            document.getElementById('tagsPanel').classList.add('hidden');
-            document.getElementById('settingsPanel').classList.add('hidden');
-            
-            // Update current memo and display it
-            currentMemo = memo;
-            showMemoDetail(memo, tags);
-        }));
+        loadMemos((memos) => displayMemoList(memos, showMemoDetail));
         displaySavedChats(showStatus, addChatMessage);
         
         // Check API key after initialization
@@ -188,7 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (input.type === 'password') {
                     input.type = 'text';
                     icon.innerHTML = `
-                        <path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd" />
+                        <path fill-rule="evenodd" d="M3.707 2.293a1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd" />
                         <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
                     `;
                 } else {
@@ -201,6 +143,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
 
+        // Add save settings handler
+        document.getElementById('saveSettings').addEventListener('click', async () => {
+            const settings = {
+                anthropicApiKey: document.getElementById('anthropicKey').value,
+                awsAccessKey: document.getElementById('awsAccessKey').value,
+                awsSecret: document.getElementById('awsSecret').value,
+                openaiKey: document.getElementById('openaiKey').value
+            };
+
+            try {
+                // Save to storage
+                await chrome.storage.sync.set(settings);
+                
+                // Update Anthropic client
+                if (settings.anthropicApiKey) {
+                    await chrome.runtime.sendMessage({
+                        action: 'setApiKey',
+                        apiKey: settings.anthropicApiKey
+                    });
+                }
+
+                showStatus('success', 'Settings saved successfully');
+            } catch (error) {
+                console.error('Failed to save settings:', error);
+                showStatus('error', 'Failed to save settings');
+            }
+        });
+
         // Add click handler for settings button
         document.getElementById('settingsButton').addEventListener('click', () => {
             // Hide other panels
@@ -211,6 +181,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             // Show settings panel
             document.getElementById('settingsPanel').classList.remove('hidden');
+            
+            // Reset capture mode if active
+            if (isHighlightMode) {
+                resetMemoButton();
+                chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+                    try {
+                        await chrome.tabs.sendMessage(tabs[0].id, {
+                            action: 'toggleHighlightMode',
+                            enabled: false
+                        });
+                    } catch (error) {
+                        console.error('Failed to disable highlight mode:', error);
+                    }
+                });
+            }
+        });
+
+        // Add click handler for memos button
+        memosButton.addEventListener('click', () => {
+            // Hide other panels
+            document.getElementById('tagsPanel').classList.add('hidden');
+            document.getElementById('chatPanel').classList.add('hidden');
+            document.getElementById('settingsPanel').classList.add('hidden');
+            
+            // If in detail view, go back to list
+            memoDetailView.classList.add('hidden');
+            memoListView.classList.remove('hidden');
             
             // Reset capture mode if active
             if (isHighlightMode) {
@@ -269,18 +266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('tagsPanel').classList.remove('hidden');
             const tagsList = document.getElementById('tagsList');
             await loadTagsFromModule(tagsList, {
-                onTagClick: (tagName) => filterMemosByTag(tagName, showStatus, (memos) => displayMemoList(memos, (memo, tags) => {
-                    // Show memo detail view and hide other views
-                    document.getElementById('memoDetailView').classList.remove('hidden');
-                    document.getElementById('memoListView').classList.add('hidden');
-                    document.getElementById('chatPanel').classList.add('hidden');
-                    document.getElementById('tagsPanel').classList.add('hidden');
-                    document.getElementById('settingsPanel').classList.add('hidden');
-                    
-                    // Update current memo and display it
-                    currentMemo = memo;
-                    showMemoDetail(memo, tags);
-                })),
+                onTagClick: (tagName) => filterMemosByTag(tagName, showStatus, (memos) => displayMemoList(memos, showMemoDetail)),
                 onTagDelete: async (tagName, updatedMemos, updatedTags) => {
                     // Force a complete refresh of the UI
                     await updateTagCounts();
@@ -299,38 +285,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateTagCounts();
         });
 
-        // Add save settings handler
-        document.getElementById('saveSettings').addEventListener('click', async () => {
-            const settings = {
-                anthropicApiKey: document.getElementById('anthropicKey').value,
-                awsAccessKey: document.getElementById('awsAccessKey').value,
-                awsSecret: document.getElementById('awsSecret').value,
-                openaiKey: document.getElementById('openaiKey').value
-            };
+        // Add save button handler
+        saveChatButton.addEventListener('click', saveCurrentChat);
 
-            try {
-                // Save to storage
-                await chrome.storage.sync.set(settings);
-                
-                // Update Anthropic client
-                if (settings.anthropicApiKey) {
-                    await chrome.runtime.sendMessage({
-                        action: 'setApiKey',
-                        apiKey: settings.anthropicApiKey
-                    });
+        // Add source toggle handler
+        const sourceToggle = document.getElementById('sourceToggle');
+        if (sourceToggle) {
+            sourceToggle.addEventListener('change', async () => {
+                if (currentChatTag && chatMessages.length > 0) {
+                    const result = await chrome.storage.local.get(['memos']);
+                    const memos = result.memos || [];
+                    const taggedMemos = memos.filter(memo => memo.tag === currentChatTag.name);
+                    
+                    // Update token count before creating system message
+                    updateTokenCount(taggedMemos, sourceToggle.checked);
+                    
+                    chatMessages = await createSystemMessage(taggedMemos, currentChatTag, chatMessages);
+                    
+                    // Add a system notification in the chat
+                    addChatMessage('assistant', 
+                        sourceToggle.checked ? 
+                        "I'm now using the original source content of the memos for our conversation." :
+                        "I'm now using the processed narratives and structured data from the memos for our conversation."
+                    );
                 }
-
-                showStatus('success', 'Settings saved successfully');
-            } catch (error) {
-                console.error('Failed to save settings:', error);
-                showStatus('error', 'Failed to save settings');
-            }
-        });
+            });
+        }
     } catch (error) {
         console.error('Error during initialization:', error);
         showStatus('error', 'Failed to initialize extension');
     }
-});
+});       
 
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((message) => {
@@ -338,18 +323,7 @@ chrome.runtime.onMessage.addListener((message) => {
         showStatus('selected');
         setSavingState();
     } else if (message.action === 'memoSaved') {
-        loadMemos((memos) => displayMemoList(memos, (memo, tags) => {
-            // Show memo detail view and hide other views
-            document.getElementById('memoDetailView').classList.remove('hidden');
-            document.getElementById('memoListView').classList.add('hidden');
-            document.getElementById('chatPanel').classList.add('hidden');
-            document.getElementById('tagsPanel').classList.add('hidden');
-            document.getElementById('settingsPanel').classList.add('hidden');
-            
-            // Update current memo and display it
-            currentMemo = memo;
-            showMemoDetail(memo, tags);
-        }));
+        loadMemos((memos) => displayMemoList(memos, showMemoDetail));
         showStatus('success', 'Memo saved');
         resetMemoButton();
     } else if (message.action === 'error') {
@@ -387,6 +361,47 @@ async function checkApiKey() {
         console.error('Error checking API key:', error);
         showStatus('error', 'Failed to check API key');
         return false;
+    }
+}
+
+// Initialize extension
+async function initializeExtension() {
+    try {
+        // Load API keys from storage
+        const result = await chrome.storage.sync.get([
+            'anthropicApiKey',
+            'awsAccessKey',
+            'awsSecret',
+            'openaiKey'
+        ]);
+
+        // Set values in form
+        if (result.anthropicApiKey) {
+            document.getElementById('anthropicKey').value = result.anthropicApiKey;
+            await chrome.runtime.sendMessage({
+                action: 'setApiKey',
+                apiKey: result.anthropicApiKey
+            });
+        }
+        if (result.awsAccessKey) {
+            document.getElementById('awsAccessKey').value = result.awsAccessKey;
+        }
+        if (result.awsSecret) {
+            document.getElementById('awsSecret').value = result.awsSecret;
+        }
+        if (result.openaiKey) {
+            document.getElementById('openaiKey').value = result.openaiKey;
+        }
+
+        // Initialize other components
+        await initializeTags();
+        loadMemos((memos) => displayMemoList(memos, showMemoDetail));
+        
+        // Check API key after initialization
+        await checkApiKey();
+    } catch (error) {
+        console.error('Error initializing extension:', error);
+        showStatus('error', 'Failed to initialize extension');
     }
 }
 
@@ -468,18 +483,7 @@ memosButton.addEventListener('click', async () => {
     
     // Show all memos
     const result = await chrome.storage.local.get(['memos']);
-    displayMemoList(result.memos || [], (memo, tags) => {
-        // Show memo detail view and hide other views
-        document.getElementById('memoDetailView').classList.remove('hidden');
-        document.getElementById('memoListView').classList.add('hidden');
-        document.getElementById('chatPanel').classList.add('hidden');
-        document.getElementById('tagsPanel').classList.add('hidden');
-        document.getElementById('settingsPanel').classList.add('hidden');
-        
-        // Update current memo and display it
-        currentMemo = memo;
-        showMemoDetail(memo, tags);
-    });
+    displayMemoList(result.memos || [], showMemoDetail);
     
     // Show notification if we cleared a filter
     if (currentTagFilter) {
@@ -554,6 +558,64 @@ document.getElementById('downloadButton').addEventListener('click', () => {
 document.getElementById('deleteButton').addEventListener('click', () => {
     if (currentMemo) {
         deleteMemo(currentMemo.id, showStatus, () => loadMemos((memos) => displayMemoList(memos, showMemoDetail)));
+    }
+});
+
+// Initialize chat interface
+document.addEventListener('DOMContentLoaded', () => {
+    // Remove send button event listener since we removed the button
+    const sendButton = document.getElementById('sendMessage');
+    if (sendButton) {
+        sendButton.remove();
+    }
+
+    // Update chat input styling and behavior
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+        chatInput.style.minHeight = '4.5rem';
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        chatInput.addEventListener('input', function() {
+            this.style.height = '4.5rem';
+            this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+        });
+    }
+});
+
+// Initialize chat when opening chat panel
+document.getElementById('chatButton').addEventListener('click', () => {
+    // Hide other panels
+    document.getElementById('tagsPanel').classList.add('hidden');
+    document.getElementById('memoListView').classList.add('hidden');
+    document.getElementById('memoDetailView').classList.add('hidden');
+    document.getElementById('settingsPanel').classList.add('hidden');
+    
+    // Show chat panel
+    document.getElementById('chatPanel').classList.remove('hidden');
+    document.getElementById('chatTagSelection').classList.remove('hidden');
+    document.getElementById('chatInterface').classList.add('hidden');
+    
+    // Initialize chat tags
+    initializeChatTags(selectChatTag);
+    
+    // Reset capture mode if active
+    if (isHighlightMode) {
+        resetMemoButton();
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+            try {
+                await chrome.tabs.sendMessage(tabs[0].id, {
+                    action: 'toggleHighlightMode',
+                    enabled: false
+                });
+            } catch (error) {
+                console.error('Failed to disable highlight mode:', error);
+            }
+        });
     }
 });
 
