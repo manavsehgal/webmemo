@@ -2,15 +2,20 @@
   "manifest_version": 3,
   "name": "Web Memo",
   "version": "1.0",
-  "description": "Save and analyze webpage content with AI-powered insights",
+  "description": "Capture, self-organize, and chat with content as you browse the web",
   "permissions": [
-    "activeTab",
     "storage",
     "sidePanel",
-    "scripting"
+    "scripting",
+    "activeTab",
+    "tabs"
   ],
-  "side_panel": {
-    "default_path": "sidepanel.html"
+  "host_permissions": [
+    "https://api.anthropic.com/*",
+    "<all_urls>"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   },
   "action": {
     "default_title": "Web Memo",
@@ -25,23 +30,24 @@
     "48": "icons/webmemo-logo-48.png",
     "128": "icons/webmemo-logo-128.png"
   },
-  "host_permissions": ["<all_urls>"],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_end",
-      "type": "module"
+      "run_at": "document_end"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["content.js", "status.js"],
+      "resources": ["content.js"],
       "matches": ["<all_urls>"]
     }
-  ],
-  "background": {
-    "service_worker": "dist/background.bundle.js",
-    "type": "module"
-  }
+  ]
 } 

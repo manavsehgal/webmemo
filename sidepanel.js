@@ -19,6 +19,7 @@ import {
     displayMemoDetail,
     getTagStyle
 } from './ui.js';
+import { createSystemMessage, calculateTokenCount } from './anthropic.js';
 
 // UI Elements
 const memoButton = document.getElementById('memoButton');
@@ -41,6 +42,55 @@ const saveChatButton = document.getElementById('saveChatButton');
 
 // Add current filter state
 let currentTagFilter = null;
+
+// Handle sending a message
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    if (!message || !currentChatTag) return;
+
+    // Clear input
+    input.value = '';
+    input.style.height = '4.5rem';
+
+    // Add user message
+    addChatMessage('user', message);
+    chatMessages.push({ role: 'user', content: message });
+
+    // Show typing indicator
+    document.getElementById('chatTypingIndicator').classList.remove('hidden');
+    input.disabled = true;  // Disable input while processing
+
+    try {
+        // Send message through background script
+        const response = await chrome.runtime.sendMessage({
+            action: 'chatMessage',
+            messages: chatMessages
+        });
+
+        if (!response.success) {
+            throw new Error(response.error || 'Failed to get response');
+        }
+
+        // Add assistant message
+        addChatMessage('assistant', response.reply);
+        chatMessages.push({ role: 'assistant', content: response.reply });
+
+    } catch (error) {
+        console.error('Chat error:', error);
+        addChatMessage('assistant', 'I apologize, but I encountered an error. Please try again.');
+        if (error.message.includes('API key not set')) {
+            checkApiKey();
+        }
+    } finally {
+        // Hide typing indicator
+        document.getElementById('chatTypingIndicator').classList.add('hidden');
+        input.disabled = false;  // Re-enable input
+    }
+}
+
+// Make sendMessage available globally
+window.sendMessage = sendMessage;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -161,7 +211,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Update token count before creating system message
                 updateTokenCount(taggedMemos, sourceToggle.checked);
                 
-                await createSystemMessage(taggedMemos);
+                // Create new system message
+                const systemMsg = createSystemMessage(taggedMemos, currentChatTag, sourceToggle.checked);
+                
+                // Update chat messages with new system message
+                chatMessages = chatMessages.filter(msg => msg.role !== 'system');
+                chatMessages.unshift({ role: 'system', content: systemMsg });
                 
                 // Add a system notification in the chat
                 addChatMessage('assistant', 
@@ -174,56 +229,70 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Add visibility toggle handlers
-    document.addEventListener('DOMContentLoaded', () => {
-        // Add handlers for all toggle visibility buttons
-        document.querySelectorAll('.toggle-visibility').forEach(button => {
-            button.addEventListener('click', () => {
-                const input = button.parentElement.querySelector('input');
-                const icon = button.querySelector('svg');
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    icon.innerHTML = `
-                        <path fill-rule="evenodd" d="M3.707 2.293a1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd" />
-                        <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
-                    `;
-                } else {
-                    input.type = 'password';
-                    icon.innerHTML = `
-                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
-                    `;
-                }
-            });
-        });
-
-        // Add save settings handler
-        document.getElementById('saveSettings').addEventListener('click', async () => {
-            const settings = {
-                anthropicApiKey: document.getElementById('anthropicKey').value,
-                awsAccessKey: document.getElementById('awsAccessKey').value,
-                awsSecret: document.getElementById('awsSecret').value,
-                openaiKey: document.getElementById('openaiKey').value
-            };
-
-            try {
-                // Save to storage
-                await saveToStorage('settings', settings);
-                
-                // Update Anthropic client
-                if (settings.anthropicApiKey) {
-                    await chrome.runtime.sendMessage({
-                        action: 'setApiKey',
-                        apiKey: settings.anthropicApiKey
-                    });
-                }
-
-                showStatus('success', 'Settings saved successfully');
-            } catch (error) {
-                console.error('Failed to save settings:', error);
-                showStatus('error', 'Failed to save settings');
+    document.querySelectorAll('.toggle-visibility').forEach(button => {
+        button.addEventListener('click', () => {
+            const input = button.parentElement.querySelector('input');
+            const icon = button.querySelector('svg');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.innerHTML = `
+                    <path fill-rule="evenodd" d="M3.707 2.293a1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd" />
+                    <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                `;
+            } else {
+                input.type = 'password';
+                icon.innerHTML = `
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                `;
             }
         });
     });
+
+    // Add save settings handler
+    document.getElementById('saveSettings').addEventListener('click', async () => {
+        const settings = {
+            anthropicApiKey: document.getElementById('anthropicKey').value,
+            awsAccessKey: document.getElementById('awsAccessKey').value,
+            awsSecret: document.getElementById('awsSecret').value,
+            openaiKey: document.getElementById('openaiKey').value
+        };
+
+        try {
+            // Save to storage
+            await saveToStorage('settings', settings);
+            
+            // Update Anthropic client
+            if (settings.anthropicApiKey) {
+                await chrome.runtime.sendMessage({
+                    action: 'setApiKey',
+                    apiKey: settings.anthropicApiKey
+                });
+            }
+
+            showStatus('success', 'Settings saved successfully');
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+            showStatus('error', 'Failed to save settings');
+        }
+    });
+
+    // Update chat input styling and behavior
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+        chatInput.style.minHeight = '4.5rem';
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        chatInput.addEventListener('input', function() {
+            this.style.height = '4.5rem';
+            this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+        });
+    }
 });
 
 // Listen for messages from background script
@@ -525,125 +594,21 @@ async function selectChatTag(tag) {
     updateTokenCount(taggedMemos, false);
     
     // Create system message
-    await createSystemMessage(taggedMemos);
+    const systemMsg = createSystemMessage(taggedMemos, currentChatTag, false);
+    chatMessages.push({ role: 'system', content: systemMsg });
 
     // Clear any existing saved chats section first
     const chatToolbar = document.querySelector('.saved-chats');
-    const existingSavedChats = chatToolbar.querySelector('.saved-chats-section');
-    if (existingSavedChats) {
-        existingSavedChats.remove();
-    }
-
-    // Filter and display saved chats for this tag
-    const taggedSavedChats = savedChats.filter(chat => chat.tag.name === tag.name);
-    if (taggedSavedChats.length > 0) {
-        const savedChatsSection = document.createElement('div');
-        savedChatsSection.className = 'mt-4 pt-4 saved-chats-section';
-        savedChatsSection.innerHTML = `
-            <h3 class="text-sm font-semibold text-gray-700 mb-2">Previous Chats</h3>
-            <div class="space-y-2">
-                ${taggedSavedChats.map(chat => `
-                    <div class="flex items-center justify-between bg-white rounded-lg p-2 hover:bg-gray-50 transition-colors duration-200 cursor-pointer saved-chat-item">
-                        <div class="flex flex-col flex-grow">
-                            <p class="text-sm text-gray-800">${chat.title}</p>
-                            <div class="flex justify-between items-center mt-1">
-                                <p class="text-xs text-gray-500">${new Date(chat.timestamp).toLocaleString()}</p>
-                                <div class="flex items-center space-x-2">
-                                    <span class="text-xs px-2 py-1 rounded-full bg-${chat.tag.color}-100 text-${chat.tag.color}-700 whitespace-nowrap">
-                                        ${chat.tag.name}
-                                    </span>
-                                    <button class="delete-saved-chat text-gray-400 hover:text-red-500 p-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-
-        // Add click handlers for saved chats
-        savedChatsSection.querySelectorAll('.saved-chat-item').forEach((item, index) => {
-            item.addEventListener('click', (e) => {
-                if (!e.target.closest('.delete-saved-chat')) {
-                    loadSavedChat(taggedSavedChats[index]);
-                }
-            });
-        });
-
-        // Add click handlers for delete buttons
-        savedChatsSection.querySelectorAll('.delete-saved-chat').forEach((button, index) => {
-            button.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const confirmed = await showDeleteConfirmation('Are you sure you want to delete this saved chat?');
-                if (confirmed) {
-                    const result = await chrome.storage.local.get(['savedChats']);
-                    const savedChats = result.savedChats || [];
-                    const updatedChats = savedChats.filter(c => c.id !== taggedSavedChats[index].id);
-                    await chrome.storage.local.set({ savedChats: updatedChats });
-                    showStatus('success', 'Chat deleted');
-                    button.closest('.saved-chat-item').remove();
-                    
-                    // Remove the section if no more chats
-                    if (updatedChats.filter(chat => chat.tag.name === tag.name).length === 0) {
-                        savedChatsSection.remove();
-                    }
-                }
-            });
-        });
-
-        chatToolbar.appendChild(savedChatsSection);
+    if (chatToolbar) {
+        chatToolbar.innerHTML = '';
     }
 }
 
-// Create system message based on toggle state
-async function createSystemMessage(taggedMemos) {
-    const useSource = document.getElementById('sourceToggle').checked;
-    
-    // Create memo context based on toggle state
-    const memoContext = taggedMemos.map((memo, index) => {
-        if (useSource) {
-            return `
-                [Memo ${index + 1}]
-                Title: ${memo.title}
-                Source Content: ${memo.sourceHtml}
-                URL: ${memo.url}
-            `;
-        } else {
-            return `
-                [Memo ${index + 1}]
-                Title: ${memo.title}
-                Narrative: ${memo.narrative}
-                Structured Data: ${JSON.stringify(memo.structuredData)}
-            `;
-        }
-    }).join('\n\n');
-
-    const systemMessage = `You are a helpful assistant with access to a collection of memos tagged as "${currentChatTag.name}". 
-    
-    Refer to this associated tag and description when responding to user prompt:
-    Tag: ${currentChatTag.name}
-    Description: ${currentChatTag.description}
-    
-    When responding to user queries, prioritize information from these memos:
-    
-    ${memoContext}
-    
-    ${useSource ? `You are now working with the original source content of the memos. Use this raw content to provide detailed, accurate responses based on the original material.` : `You are working with processed narratives and structured data from the memos. Use this curated content to provide focused, organized responses.`}
-    
-    You can also use your general knowledge to provide additional context and insights beyond what's in the memos.
-    Always be clear when you're referencing memo content versus providing supplementary information.
-    
-    When you reference information from a memo, cite it using its title in square brackets like this: [Title of Memo].
-    If you reference multiple memos, cite each one where its information is used.
-    Always cite memos when you use their information in your response.`;
-
-    // Update chat messages with new system message
-    chatMessages = chatMessages.filter(msg => msg.role !== 'system');
-    chatMessages.unshift({ role: 'system', content: systemMessage });
+// Update token count display
+function updateTokenCount(memos, useSource = false) {
+    const tokenCount = calculateTokenCount(memos, useSource);
+    const tokenCountElement = document.getElementById('tokenCount');
+    tokenCountElement.textContent = `This chat will cost around ${tokenCount.toLocaleString()} tokens`;
 }
 
 // Add a message to the chat
@@ -726,112 +691,6 @@ async function showMemoByTitle(title) {
 
 // Make showMemoByTitle available to onclick handlers
 window.showMemoByTitle = showMemoByTitle;
-
-// Chat input handlers
-document.addEventListener('DOMContentLoaded', () => {
-    // Remove send button event listener since we removed the button
-    const sendButton = document.getElementById('sendMessage');
-    if (sendButton) {
-        sendButton.remove();
-    }
-
-    // Update chat input styling and behavior
-    const chatInput = document.getElementById('chatInput');
-    if (chatInput) {
-        chatInput.style.minHeight = '4.5rem';
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        chatInput.addEventListener('input', function() {
-            this.style.height = '4.5rem';
-            this.style.height = Math.min(this.scrollHeight, 160) + 'px';
-        });
-    }
-});
-
-// Initialize chat when opening chat panel
-document.getElementById('chatButton').addEventListener('click', () => {
-    // Hide other panels
-    document.getElementById('tagsPanel').classList.add('hidden');
-    document.getElementById('memoListView').classList.add('hidden');
-    document.getElementById('memoDetailView').classList.add('hidden');
-    
-    // Show chat panel
-    document.getElementById('chatPanel').classList.remove('hidden');
-    document.getElementById('chatTagSelection').classList.remove('hidden');
-    document.getElementById('chatInterface').classList.add('hidden');
-    
-    // Initialize chat tags
-    initializeChatTags();
-    
-    // Reset capture mode if active
-    if (isHighlightMode) {
-        resetMemoButton();
-        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-            try {
-                await chrome.tabs.sendMessage(tabs[0].id, {
-                    action: 'toggleHighlightMode',
-                    enabled: false
-                });
-            } catch (error) {
-                console.error('Failed to disable highlight mode:', error);
-            }
-        });
-    }
-});
-
-// Handle sending a message
-async function sendMessage() {
-    const input = document.getElementById('chatInput');
-    const message = input.value.trim();
-    if (!message || !currentChatTag) return;
-
-    // Clear input
-    input.value = '';
-    input.style.height = '4.5rem';
-
-    // Add user message
-    addChatMessage('user', message);
-    chatMessages.push({ role: 'user', content: message });
-
-    // Show typing indicator
-    document.getElementById('chatTypingIndicator').classList.remove('hidden');
-    input.disabled = true;  // Disable input while processing
-
-    try {
-        // Send message through background script
-        const response = await chrome.runtime.sendMessage({
-            action: 'chatMessage',
-            messages: chatMessages
-        });
-
-        if (!response.success) {
-            throw new Error(response.error || 'Failed to get response');
-        }
-
-        // Add assistant message
-        addChatMessage('assistant', response.reply);
-        chatMessages.push({ role: 'assistant', content: response.reply });
-
-    } catch (error) {
-        console.error('Chat error:', error);
-        addChatMessage('assistant', 'I apologize, but I encountered an error. Please try again.');
-        if (error.message.includes('API key not set')) {
-            checkApiKey();
-        }
-    } finally {
-        // Hide typing indicator
-        document.getElementById('chatTypingIndicator').classList.add('hidden');
-        input.disabled = false;  // Re-enable input
-    }
-}
-
-// Make sendMessage available to onclick handlers
-window.sendMessage = sendMessage;
 
 // Save current chat
 async function saveCurrentChat() {
@@ -960,26 +819,6 @@ function loadSavedChat(chat) {
 
     // Show save button
     saveChatButton.classList.remove('hidden');
-}
-
-// Calculate total word count for memos
-function calculateMemosWordCount(memos, useSource = false) {
-    return memos.reduce((total, memo) => {
-        if (useSource) {
-            return total + countWords(memo.sourceHtml);
-        } else {
-            return total + countWords(memo.narrative) + 
-                   countWords(JSON.stringify(memo.structuredData));
-        }
-    }, 0);
-}
-
-// Update token count display
-function updateTokenCount(memos, useSource = false) {
-    const wordCount = calculateMemosWordCount(memos, useSource);
-    const tokenCount = Math.round(wordCount * 1.3);
-    const tokenCountElement = document.getElementById('tokenCount');
-    tokenCountElement.textContent = `This chat will cost around ${wordCount.toLocaleString()} words (${tokenCount.toLocaleString()} tokens)`;
 }
 
 // Update the tag-related event listeners
