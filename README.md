@@ -1,8 +1,6 @@
 # Web Memo
 Multi-tasking with AI superpowers. Capture, self-organize, and chat with content as you browse the web.
 
-[Get walkthrough on my substack](https://manavsehgal.substack.com/)
-
 ## User Journey
 Web Memo is a Chrome extension that allows you to capture, self-organize, and chat with content as you browse the web. You can use Web Memo to organize your shopping, entertainment, learning, research, and more.
 
