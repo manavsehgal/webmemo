@@ -10,7 +10,7 @@ Web Memo is a Chrome extension that allows you to capture, self-organize, and ch
 
 You can capture entire transcripts of podcasts and YouTube videos. Web Memo will automatically summarize the content and generate a narrative version of it. You can create a project for your investment thesis and capture content related to it. You can chat with your memos by investment thesis project tag. The chat will be context aware and use the project description or objective along with locally stored memo narratives and structured data to provide fast, accurate, and relevant responses. You can save important chat conversations and expand on them later. There is also an option to chat with the original content source of the memos. The chat responses include clickable links to cited memos. Once inside memo details view, you can click to open the original content source in a new browser tab.
 
-![Web Memo Workflow](path/to/web-memo-workflow.png)
+![Web Memo Workflow](images/web-memo-workflow.png)
 
 ### Shopping Workflow
 Let us say you are planning a birthday party for your 6 year old. As you search for toys and decorations to buy, you can capture the content you find on Amazon, Target, and other stores. You can also capture content from blogs, podcasts, and other websites. As you capture content, Web Memo will automatically categorize it into projects like Shopping, Toys, Party Planning, etc. Web Memo will also automatically summarize the content and generate a narrative version of it. If the content is product details with price, reviews, and other data about the product, Web Memo will extract that data and store it in a structured format.
