@@ -310,8 +310,9 @@ export async function initializeChatTags(onTagSelect) {
 
 // Select a tag for chat
 export async function selectChatTag(tag, chatMessages, showStatus, addChatMessage) {
-    const result = await chrome.storage.local.get(['memos']);
+    const result = await chrome.storage.local.get(['memos', 'savedChats']);
     const memos = result.memos || [];
+    const savedChats = result.savedChats || [];
     const taggedMemos = memos.filter(memo => memo.tag === tag.name);
     
     // Show notification
@@ -327,6 +328,66 @@ export async function selectChatTag(tag, chatMessages, showStatus, addChatMessag
     
     // Add system message
     addChatMessage('assistant', `I'm ready to help you with your ${tag.name} memos. What would you like to know?`);
+
+    // Show saved chats for this tag
+    const taggedChats = savedChats.filter(chat => chat.tag.name === tag.name);
+    const savedChatsContainer = document.getElementById('savedChatsForTag');
+    if (savedChatsContainer && taggedChats.length > 0) {
+        savedChatsContainer.innerHTML = `
+            <div class="mt-4 border-t border-gray-200 pt-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Previous chats about ${tag.name}</h3>
+                <div class="flex flex-col space-y-2">
+                    ${taggedChats.map(chat => {
+                        const firstUserMessage = chat.messages.find(msg => msg.role === 'user')?.content || 'Empty chat';
+                        const messageCount = chat.messages.filter(msg => msg.role === 'user').length;
+                        return `
+                            <button class="load-saved-chat group flex flex-col text-left px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors duration-200" data-chat-id="${chat.id}">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs text-gray-500">${new Date(chat.timestamp).toLocaleString()}</span>
+                                    <span class="text-xs text-gray-400">${messageCount} message${messageCount !== 1 ? 's' : ''}</span>
+                                </div>
+                                <div class="text-sm text-gray-600 group-hover:text-gray-900 line-clamp-2">${firstUserMessage}</div>
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+
+        // Add click handlers for saved chat buttons
+        savedChatsContainer.querySelectorAll('.load-saved-chat').forEach(button => {
+            button.addEventListener('click', () => {
+                const chatId = button.getAttribute('data-chat-id');
+                const chat = savedChats.find(c => c.id === chatId);
+                if (chat) {
+                    // Clear current chat
+                    const chatMessages = document.getElementById('chatMessages');
+                    chatMessages.innerHTML = '';
+                    
+                    // Load saved chat messages
+                    chat.messages.forEach(msg => addChatMessage(msg.role, msg.content));
+                    
+                    // Clear saved chats container
+                    savedChatsContainer.innerHTML = '';
+                    
+                    // Show save button
+                    const saveChatButton = document.getElementById('saveChatButton');
+                    if (saveChatButton) {
+                        saveChatButton.classList.remove('hidden');
+                        saveChatButton.classList.add('flex');
+                    }
+
+                    // Scroll chat into view
+                    chatMessages.scrollIntoView({ behavior: 'smooth' });
+                    
+                    // Return updated messages
+                    chatMessages = chat.messages;
+                }
+            });
+        });
+    } else if (savedChatsContainer) {
+        savedChatsContainer.innerHTML = '';
+    }
     
     return {
         currentChatTag: tag,
