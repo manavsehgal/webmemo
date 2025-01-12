@@ -236,8 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (input.type === 'password') {
                 input.type = 'text';
                 icon.innerHTML = `
-                    <path fill-rule="evenodd" d="M3.707 2.293a1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd" />
-                    <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                    <path d="M13.875 7.375c-.621-.462-1.373-.875-2.188-1.125.25.5.438 1.062.438 1.75 0 1.938-1.562 3.5-3.5 3.5-1.938 0-3.5-1.562-3.5-3.5 0-.688.188-1.25.438-1.75C4.75 6.5 4 6.938 3.375 7.375 2.625 8 2 8.875 2 10c0 4.438 3.562 8 8 8s8-3.562 8-8c0-1.125-.625-2-1.875-2.625zM8.625 10c0-1.062.875-1.938 1.938-1.938 1.062 0 1.938.875 1.938 1.938 0 1.062-.875 1.938-1.938 1.938-1.062 0-1.938-.875-1.938-1.938z" />
                 `;
             } else {
                 input.type = 'password';
@@ -252,10 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add save settings handler
     document.getElementById('saveSettings').addEventListener('click', async () => {
         const settings = {
-            anthropicApiKey: document.getElementById('anthropicKey').value,
-            awsAccessKey: document.getElementById('awsAccessKey').value,
-            awsSecret: document.getElementById('awsSecret').value,
-            openaiKey: document.getElementById('openaiKey').value
+            anthropicApiKey: document.getElementById('anthropicKey').value
         };
 
         try {
@@ -345,12 +341,9 @@ async function checkApiKey() {
 // Initialize extension
 async function initializeExtension() {
     try {
-        // Load API keys and data from storage
+        // Load API key and data from storage
         const result = await chrome.storage.local.get([
             'anthropicApiKey',
-            'awsAccessKey',
-            'awsSecret',
-            'openaiKey',
             'memos',
             'tags',
             'savedChats'
@@ -374,22 +367,13 @@ async function initializeExtension() {
             }
         }
 
-        // Set values in form
+        // Set API key in form if available
         if (result.anthropicApiKey) {
             document.getElementById('anthropicKey').value = result.anthropicApiKey;
             await chrome.runtime.sendMessage({
                 action: 'setApiKey',
                 apiKey: result.anthropicApiKey
             });
-        }
-        if (result.awsAccessKey) {
-            document.getElementById('awsAccessKey').value = result.awsAccessKey;
-        }
-        if (result.awsSecret) {
-            document.getElementById('awsSecret').value = result.awsSecret;
-        }
-        if (result.openaiKey) {
-            document.getElementById('openaiKey').value = result.openaiKey;
         }
 
         // Initialize other components
