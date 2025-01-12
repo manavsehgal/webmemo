@@ -1,0 +1,31 @@
+/* Tag Styles */
+.tag-item {
+    @apply flex items-center justify-between p-2 rounded-lg transition-colors duration-200;
+}
+
+.tag-icon {
+    @apply w-5 h-5 flex items-center justify-center;
+}
+
+.tag-content {
+    @apply flex-grow;
+}
+
+.tag-name {
+    @apply font-medium;
+}
+
+.tag-description {
+    @apply text-sm;
+}
+
+.tag-count {
+    @apply text-xs px-2 py-0.5 rounded-full;
+}
+
+.delete-button {
+    @apply p-1 text-gray-400 hover:text-red-500 transition-colors duration-200;
+}
+
+/* Memo Styles */
+/* ... other shared styles ... */ 
