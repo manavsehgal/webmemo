@@ -272,4 +272,64 @@ export function initializeTagManagement(addTagButton, addTagForm, newTagName, ne
             onTagsUpdated();
         }
     });
+}
+
+// Initialize chat tags interface
+export async function initializeChatTags(onTagSelect) {
+    const result = await chrome.storage.local.get(['memos', 'tags']);
+    const memos = result.memos || [];
+    const tags = result.tags || [];
+    const tagsList = document.getElementById('chatTagsList');
+    tagsList.innerHTML = '';
+
+    // Count memos for each tag
+    const counts = memos.reduce((acc, memo) => {
+        const tag = memo.tag || 'Untagged';
+        acc[tag] = (acc[tag] || 0) + 1;
+        return acc;
+    }, {});
+
+    // Create tag pills for tags with memos
+    tags.forEach(tag => {
+        const count = counts[tag.name] || 0;
+        if (count > 0) {
+            const tagPill = document.createElement('button');
+            tagPill.className = `chat-tag-pill flex items-center space-x-2 px-3 py-1.5 bg-${tag.color}-100 text-${tag.color}-700 rounded-full hover:bg-${tag.color}-200 transition-colors duration-200`;
+            tagPill.innerHTML = `
+                <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                    ${tag.icon}
+                </svg>
+                <span>${tag.name}</span>
+                <span class="bg-${tag.color}-200 text-${tag.color}-800 text-xs px-2 py-0.5 rounded-full">${count}</span>
+            `;
+            tagPill.addEventListener('click', () => onTagSelect(tag));
+            tagsList.appendChild(tagPill);
+        }
+    });
+}
+
+// Select a tag for chat
+export async function selectChatTag(tag, chatMessages, showStatus, addChatMessage) {
+    const result = await chrome.storage.local.get(['memos']);
+    const memos = result.memos || [];
+    const taggedMemos = memos.filter(memo => memo.tag === tag.name);
+    
+    // Show notification
+    showStatus('success', `Selected ${taggedMemos.length} memos tagged as "${tag.name}"`);
+    
+    // Show chat interface and hide tag selection
+    document.getElementById('chatTagSelection').classList.add('hidden');
+    document.getElementById('chatInterface').classList.remove('hidden');
+    
+    // Clear chat messages
+    chatMessages = [];
+    document.getElementById('chatMessages').innerHTML = '';
+    
+    // Add system message
+    addChatMessage('assistant', `I'm ready to help you with your ${tag.name} memos. What would you like to know?`);
+    
+    return {
+        currentChatTag: tag,
+        chatMessages: chatMessages
+    };
 } 
