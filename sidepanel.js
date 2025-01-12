@@ -6,9 +6,7 @@ import {
     initializeTags, 
     loadTags as loadTagsFromModule, 
     updateTagCounts,
-    initializeTagManagement,
-    initializeChatTags,
-    selectChatTag as selectChatTagFromModule
+    initializeTagManagement
 } from './modules/tags.js';
 // Import chat functions
 import { 
@@ -23,15 +21,6 @@ import {
 } from './modules/chat.js';
 // Import memo detail functions
 import { showMemoDetail } from './modules/memo-details.js';
-// Import status functions
-import { showStatus, hideStatus } from './modules/status.js';
-// Import memo functions
-import { 
-    loadMemos,
-    filterMemosByTag,
-    displayMemoList,
-    deleteMemo
-} from './modules/memos.js';
 
 // UI Elements
 const memoButton = document.getElementById('memoButton');
@@ -116,7 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         // Load initial data
-        loadMemos((memos) => displayMemoList(memos, showMemoDetail));
+        loadMemos();
         displaySavedChats(showStatus, addChatMessage);
         
         // Check API key after initialization
@@ -239,7 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('chatInterface').classList.add('hidden');
             
             // Initialize chat tags
-            initializeChatTags(selectChatTag);
+            initializeChatTags();
             
             // Reset capture mode if active
             if (isHighlightMode) {
@@ -266,7 +255,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('tagsPanel').classList.remove('hidden');
             const tagsList = document.getElementById('tagsList');
             await loadTagsFromModule(tagsList, {
-                onTagClick: (tagName) => filterMemosByTag(tagName, showStatus, (memos) => displayMemoList(memos, showMemoDetail)),
+                onTagClick: filterMemosByTag,
                 onTagDelete: async (tagName, updatedMemos, updatedTags) => {
                     // Force a complete refresh of the UI
                     await updateTagCounts();
@@ -317,13 +306,145 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });       
 
+
+// Show status update
+function showStatus(status, message = '') {
+    const statusArea = document.getElementById('statusArea');
+    const statusBadge = document.getElementById('statusBadge');
+    const statusIcon = document.getElementById('statusIcon');
+    const statusText = document.getElementById('statusText');
+    const statusSubtext = document.getElementById('statusSubtext');
+    const selectionGuide = document.getElementById('selectionGuide');
+
+    // Configure status
+    switch (status) {
+        case 'select':
+            statusIcon.innerHTML = `<svg class="text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M6.672 1.911a1 1 0 10-1.932.518l.259.966a1 1 0 001.932-.518l-.26-.966zM2.429 4.74a1 1 0 10-.517 1.932l.966.259a1 1 0 00.517-1.932l-.966-.26zm8.814-.569a1 1 0 00-1.415-1.414l-.707.707a1 1 0 101.415 1.415l.707-.708zm-7.071 7.072l.707-.707A1 1 0 003.465 9.12l-.708.707a1 1 0 001.415 1.415zm3.2-5.171a1 1 0 00-1.3 1.3l4 10a1 1 0 001.823.075l1.38-2.759 3.018 3.02a1 1 0 001.414-1.415l-3.019-3.02 2.76-1.379a1 1 0 00-.076-1.822l-10-4z" />
+            </svg>`;
+            statusText.textContent = 'Selection Mode';
+            statusSubtext.textContent = 'Click any content to capture';
+            statusSubtext.classList.remove('hidden');
+            // Remove selectionGuide display
+            selectionGuide.classList.add('hidden');
+            break;
+        case 'selected':
+            statusIcon.innerHTML = `<svg class="text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>`;
+            statusText.textContent = 'Content Selected';
+            statusSubtext.textContent = 'Processing will begin shortly';
+            statusSubtext.classList.remove('hidden');
+            selectionGuide.classList.add('translate-y-2', 'opacity-0');
+            setTimeout(() => {
+                selectionGuide.classList.add('hidden');
+            }, 300);
+            break;
+        case 'processing':
+            statusIcon.innerHTML = `<svg class="text-blue-500 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>`;
+            statusText.textContent = 'Processing';
+            statusSubtext.textContent = message || 'Analyzing content with AI';
+            statusSubtext.classList.remove('hidden');
+            selectionGuide.classList.add('translate-y-2', 'opacity-0');
+            setTimeout(() => {
+                selectionGuide.classList.add('hidden');
+            }, 300);
+            break;
+        case 'success':
+            statusIcon.innerHTML = `<svg class="text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>`;
+            statusText.textContent = message || 'Success';
+            statusSubtext.classList.add('hidden');
+            break;
+        case 'delete':
+            statusIcon.innerHTML = `<svg class="text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>`;
+            statusText.textContent = 'Memo Deleted';
+            statusSubtext.classList.add('hidden');
+            break;
+        case 'copy':
+            statusIcon.innerHTML = `<svg class="text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+            </svg>`;
+            statusText.textContent = 'Copied';
+            statusSubtext.textContent = 'Content copied to clipboard';
+            statusSubtext.classList.remove('hidden');
+            break;
+        case 'download':
+            statusIcon.innerHTML = `<svg class="text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>`;
+            statusText.textContent = 'Downloaded';
+            statusSubtext.textContent = 'Memo saved to downloads';
+            statusSubtext.classList.remove('hidden');
+            break;
+        case 'api':
+            statusIcon.innerHTML = `<svg class="text-purple-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd" />
+            </svg>`;
+            statusText.textContent = 'API Key';
+            statusSubtext.textContent = message || 'API key updated';
+            statusSubtext.classList.remove('hidden');
+            break;
+        case 'error':
+            statusIcon.innerHTML = `<svg class="text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>`;
+            statusText.textContent = 'Error';
+            statusSubtext.textContent = message || 'Something went wrong';
+            statusSubtext.classList.remove('hidden');
+            break;
+    }
+
+    // Show status with animation
+    statusArea.style.height = 'auto';
+    const height = statusArea.offsetHeight;
+    statusArea.style.height = '0';
+    
+    // Trigger reflow
+    statusArea.offsetHeight;
+    
+    // Animate in
+    statusArea.style.height = height + 'px';
+    statusBadge.classList.remove('translate-y-2', 'opacity-0');
+
+    // Auto-hide after delay for completed actions
+    if (['success', 'delete', 'copy', 'download', 'api', 'error'].includes(status)) {
+        setTimeout(() => {
+            // Animate out
+            statusBadge.classList.add('translate-y-2', 'opacity-0');
+            statusArea.style.height = '0';
+        }, 3000);
+    }
+}
+
+// Reset status area
+function hideStatus() {
+    const statusArea = document.getElementById('statusArea');
+    const statusBadge = document.getElementById('statusBadge');
+    const selectionGuide = document.getElementById('selectionGuide');
+
+    statusBadge.classList.add('translate-y-2', 'opacity-0');
+    statusArea.style.height = '0';
+    selectionGuide.classList.add('translate-y-2', 'opacity-0');
+    setTimeout(() => {
+        selectionGuide.classList.add('hidden');
+    }, 300);
+}
+
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((message) => {
     if (message.action === 'selectionMade') {
         showStatus('selected');
         setSavingState();
     } else if (message.action === 'memoSaved') {
-        loadMemos((memos) => displayMemoList(memos, showMemoDetail));
+        loadMemos(); // Refresh the memo list
         showStatus('success', 'Memo saved');
         resetMemoButton();
     } else if (message.action === 'error') {
@@ -395,7 +516,7 @@ async function initializeExtension() {
 
         // Initialize other components
         await initializeTags();
-        loadMemos((memos) => displayMemoList(memos, showMemoDetail));
+        loadMemos();
         
         // Check API key after initialization
         await checkApiKey();
@@ -468,6 +589,58 @@ memoButton.addEventListener('click', async () => {
     });
 });
 
+// Load and display memos
+function loadMemos() {
+    chrome.storage.local.get(['memos'], (result) => {
+        const memos = result.memos || [];
+        displayMemoList(memos);
+    });
+}
+
+// Delete memo with custom confirmation dialog
+async function deleteMemo(memoId) {
+    const confirmed = await showDeleteConfirmation('Are you sure you want to delete this memo? This action cannot be undone.');
+    if (!confirmed) return;
+    
+    try {
+        const result = await chrome.storage.local.get(['memos']);
+        const memos = result.memos || [];
+        const updatedMemos = memos.filter(memo => memo.id !== memoId);
+        
+        await chrome.storage.local.set({ memos: updatedMemos });
+        showStatus('delete');
+        
+        // If in detail view, go back to list
+        if (memoDetailView.classList.contains('hidden')) {
+            loadMemos();
+        } else {
+            memoDetailView.classList.add('hidden');
+            memoListView.classList.remove('hidden');
+            loadMemos();
+        }
+    } catch (error) {
+        console.error('Failed to delete memo:', error);
+        showStatus('error', 'Could not delete memo');
+    }
+}
+
+// Filter memos by tag
+async function filterMemosByTag(tagName) {
+    const result = await chrome.storage.local.get(['memos']);
+    const memos = result.memos || [];
+    
+    currentTagFilter = tagName;
+    const filteredMemos = memos.filter(memo => memo.tag === tagName);
+    
+    // Show notification
+    showStatus('success', `Showing ${filteredMemos.length} memos tagged as "${tagName}"`);
+    
+    // Switch to memos list view and display filtered memos
+    document.getElementById('tagsPanel').classList.add('hidden');
+    document.getElementById('memoListView').classList.remove('hidden');
+    displayMemoList(filteredMemos);
+}
+
 // Update memos button click handler to clear filter
 memosButton.addEventListener('click', async () => {
     // Clear filter
@@ -483,7 +656,7 @@ memosButton.addEventListener('click', async () => {
     
     // Show all memos
     const result = await chrome.storage.local.get(['memos']);
-    displayMemoList(result.memos || [], showMemoDetail);
+    displayMemoList(result.memos || []);
     
     // Show notification if we cleared a filter
     if (currentTagFilter) {
@@ -505,6 +678,70 @@ memosButton.addEventListener('click', async () => {
         });
     }
 });
+
+// Display memo list
+async function displayMemoList(memos) {
+    const result = await chrome.storage.local.get(['tags']);
+    const tags = result.tags || [];
+    console.log('displayMemoList tags:', tags);
+    
+    // Keep the title and add a container for memo items
+    const titleHtml = `
+        <div class="flex justify-between items-center mb-2">
+            <h2 class="text-lg font-semibold text-gray-800">Memos</h2>
+        </div>
+    `;
+    const memoItemsContainer = document.createElement('div');
+    memoItemsContainer.className = 'space-y-4';
+    
+    memoListView.innerHTML = titleHtml;
+    memoListView.appendChild(memoItemsContainer);
+    
+    for (const memo of memos) {
+        const tagStyle = await getTagStyle(memo.tag || 'Untagged');
+        console.log('displayMemoList memo.tag || Untagged:', memo.tag || 'Untagged');
+        const memoItem = document.createElement('div');
+        memoItem.className = 'memo-list-item bg-white rounded-lg shadow p-4 cursor-pointer relative';
+        memoItem.innerHTML = `
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center">
+                    <img src="${memo.favicon}" class="w-4 h-4 mr-2" alt="">
+                    <h3 class="font-semibold text-gray-800">${memo.title}</h3>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs px-2 py-1 rounded-full bg-${tagStyle.color}-100 text-${tagStyle.color}-700">
+                        ${memo.tag || 'Untagged'}
+                    </span>
+                    <button class="delete-memo text-gray-400 hover:text-red-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <p class="text-[0.6rem] leading-[0.9rem] text-gray-600 mb-2">${memo.summary}</p>
+            <div class="text-xs text-gray-500">
+                ${new Date(memo.timestamp).toLocaleString()}
+            </div>
+        `;
+        
+        // Add click handler for the memo item (excluding delete button)
+        memoItem.addEventListener('click', (e) => {
+            if (!e.target.closest('.delete-memo')) {
+                showMemoDetail(memo, tags);
+            }
+        });
+        
+        // Add click handler for delete button
+        const deleteButton = memoItem.querySelector('.delete-memo');
+        deleteButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteMemo(memo.id);
+        });
+        
+        memoItemsContainer.appendChild(memoItem);
+    }
+}
 
 // Back button handler
 backButton.addEventListener('click', () => {
@@ -557,11 +794,52 @@ document.getElementById('downloadButton').addEventListener('click', () => {
 // Delete button handler
 document.getElementById('deleteButton').addEventListener('click', () => {
     if (currentMemo) {
-        deleteMemo(currentMemo.id, showStatus, () => loadMemos((memos) => displayMemoList(memos, showMemoDetail)));
+        deleteMemo(currentMemo.id);
     }
 });
 
 // Initialize chat interface
+async function initializeChatTags() {
+    const result = await chrome.storage.local.get(['memos', 'tags']);
+    const memos = result.memos || [];
+    const tags = result.tags || [];
+    const tagsList = document.getElementById('chatTagsList');
+    tagsList.innerHTML = '';
+
+    // Count memos for each tag
+    const counts = memos.reduce((acc, memo) => {
+        const tag = memo.tag || 'Untagged';
+        acc[tag] = (acc[tag] || 0) + 1;
+        return acc;
+    }, {});
+
+    // Create tag pills for tags with memos
+    tags.forEach(tag => {
+        const count = counts[tag.name] || 0;
+        if (count > 0) {
+            const tagPill = document.createElement('button');
+            tagPill.className = `chat-tag-pill flex items-center space-x-2 px-3 py-1.5 bg-${tag.color}-100 text-${tag.color}-700 rounded-full hover:bg-${tag.color}-200 transition-colors duration-200`;
+            tagPill.innerHTML = `
+                <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                    ${tag.icon}
+                </svg>
+                <span>${tag.name}</span>
+                <span class="bg-${tag.color}-200 text-${tag.color}-800 text-xs px-2 py-0.5 rounded-full">${count}</span>
+            `;
+            tagPill.addEventListener('click', () => selectChatTag(tag));
+            tagsList.appendChild(tagPill);
+        }
+    });
+}
+
+// Select a tag for chat
+async function selectChatTag(tag) {
+    const result = await selectChatTagModule(tag, chatMessages, showStatus, addChatMessage);
+    currentChatTag = result.currentChatTag;
+    chatMessages = result.chatMessages;
+}
+
+// Chat input handlers
 document.addEventListener('DOMContentLoaded', () => {
     // Remove send button event listener since we removed the button
     const sendButton = document.getElementById('sendMessage');
@@ -601,7 +879,7 @@ document.getElementById('chatButton').addEventListener('click', () => {
     document.getElementById('chatInterface').classList.add('hidden');
     
     // Initialize chat tags
-    initializeChatTags(selectChatTag);
+    initializeChatTags();
     
     // Reset capture mode if active
     if (isHighlightMode) {
@@ -618,13 +896,6 @@ document.getElementById('chatButton').addEventListener('click', () => {
         });
     }
 });
-
-// Select a tag for chat
-async function selectChatTag(tag) {
-    const result = await selectChatTagFromModule(tag, chatMessages, showStatus, addChatMessage);
-    currentChatTag = result.currentChatTag;
-    chatMessages = result.chatMessages;
-}
 
 // Handle sending a message
 async function sendMessage() {
