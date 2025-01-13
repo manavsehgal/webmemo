@@ -1,4 +1,4 @@
-// lib/anthropic-client.js
+// anthropic-api.js
 var AnthropicClient = class {
   constructor(apiKey) {
     this.apiKey = apiKey;
@@ -38,8 +38,6 @@ var Anthropic = class {
     };
   }
 };
-
-// anthropic.js
 var anthropicApiKey = "";
 var anthropicClient = null;
 function initializeAnthropicClient(apiKey) {

@@ -1,4 +1,4 @@
-import { initializeAnthropicClient, processChatMessage, processWithClaude } from './anthropic.js';
+import { initializeAnthropicClient, processChatMessage, processWithClaude } from './anthropic-api.js';
 
 // Function to sanitize text for JSON
 function sanitizeForJson(text) {

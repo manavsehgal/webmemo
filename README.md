@@ -36,6 +36,8 @@ This completes the loop. You can capture content, self-organize it, chat with it
 11. Project-based content organization
 12. Structured data extraction
 13. Source linking and navigation
+14. Chrome Side Panel integration
+15. Cross-origin resource access
 
 ### Technical Requirements
 1. Manifest V3 compliance
@@ -57,6 +59,8 @@ This completes the loop. You can capture content, self-organize it, chat with it
 17. ESM module support
 18. Browser-compatible bundling
 19. Minimal dependency footprint
+20. Content Security Policy (CSP) compliance
+21. Service Worker architecture
 
 ### Development Requirements
 1. Node.js environment
@@ -65,6 +69,104 @@ This completes the loop. You can capture content, self-organize it, chat with it
 4. Browser platform targeting
 5. Development build process
 6. Production optimization
+
+### Dependencies
+- Production:
+  - @anthropic-ai/sdk: AI integration for content processing (v0.18.0)
+- Development:
+  - esbuild: Modern JavaScript bundling (v0.20.1)
+
+### Build System
+- Uses ESBuild for fast, efficient bundling
+- Currently bundles background script as service worker
+- Other files loaded directly as ES modules
+- Outputs ES modules for modern browser compatibility
+- Optimizes dependencies for browser environment
+- Supports development and production builds
+- CSP-compliant output
+
+### Required Permissions
+- storage: For local data storage
+- sidePanel: For Chrome side panel functionality
+- scripting: For content script injection
+- activeTab: For current tab access
+- tabs: For tab management
+- Host permissions:
+  - api.anthropic.com: For AI processing
+  - all_urls: For content capture
+
+## Setup and Start
+
+1. Clone the repository
+2. Run `npm install` to install dependencies:
+   - Production: @anthropic-ai/sdk (v0.18.0)
+   - Development: esbuild (v0.20.1)
+3. Create a `dist` directory in the project root
+4. Run `npm run build` to bundle the extension
+   - This creates optimized browser-compatible bundle for the background service worker
+   - Note: Only background.js is currently bundled, other files are loaded directly
+5. Load the extension in Chrome:
+   - Navigate to chrome://extensions/
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select the extension directory
+6. Configure the extension:
+   - Set up your Anthropic API key
+   - Configure any custom preferences
+7. Start using the extension:
+   - Click "Capture" to start capturing memos
+   - Click "Chat" to start chatting with your memos
+   - Click "Tags" to browse filtered memos
+
+Note: The extension uses strict Content Security Policy (CSP) settings. When developing, make sure any added scripts or resources comply with the CSP rules defined in manifest.json.
+
+## Development
+
+### Build System
+- Uses ESBuild for fast, efficient bundling
+- Outputs ES modules for modern browser compatibility
+- Optimizes dependencies for browser environment
+- Supports development and production builds
+
+### Dependencies
+- Production:
+  - @anthropic-ai/sdk: AI integration for content processing
+- Development:
+  - esbuild: Modern JavaScript bundling
+
+### Architecture
+- ES Module-based design
+- Browser-compatible output
+- Minimal external dependencies
+- Optimized bundle size
+
+## Future Roadmap
+
+*Note: These are just ideas and not necessarily in order of priority and not all will be implemented as right now I am only working on this over weekends. If you are interested in collaborating on this project, please reach out.*
+
+1. Multi-LLM Integration: Enable users to choose between OpenAI, Google, or run local models via Ollama for content processing and chat interactions.
+
+2. Extended Content Sources: Capture and process content from YouTube videos, Twitter threads, and other social media platforms directly within the extension.
+
+3. Rich Media Support: Process and analyze images, videos, and audio content, enabling comprehensive multi-media content capture and organization.
+
+4. Advanced Format Handling: Import and process content from markdown files, PDFs, and other document formats while preserving structure and formatting.
+
+5. Enhanced Content Analysis: Implement sentiment analysis, topic modeling, and advanced content categorization to provide deeper insights into captured content.
+
+6. Data Visualization: Generate interactive charts, graphs, and visual representations of content relationships and insights.
+
+7. Content Distribution: Share memos and insights via email, SMS, and other communication channels directly from the extension.
+
+8. Collaborative Features: Enable memo sharing and collaborative content organization among team members or research groups.
+
+9. Task Management Integration: Convert memos into actionable items like to-do lists, checklists, and project milestones.
+
+10. Calendar Integration: Create calendar events, schedule meetings, and set reminders based on memo content and insights.
+
+11. Automated Workflows: Implement AI agents that can execute tasks based on memo content, such as creating shopping lists or scheduling appointments.
+
+12. System Integration: Enable the extension to interact with system applications, creating spreadsheets, performing web searches, and managing files based on memo content and user objectives.
 
 ## Epics
 
@@ -191,73 +293,4 @@ This completes the loop. You can capture content, self-organize it, chat with it
 - As a user, I want to see the status of my API configuration
 - As a user, I want to set project-specific preferences
 - As a user, I want to configure default tags for different types of projects
-
-## Setup and Start
-
-1. Clone the repository
-2. Run `npm install` to install dependencies:
-   - Production: @anthropic-ai/sdk (v0.18.0 or later)
-   - Development: esbuild (v0.20.1 or later)
-3. Run `npm run build` to bundle the extension
-   - This creates optimized browser-compatible bundles in the `dist` directory
-4. Load the extension in Chrome:
-   - Navigate to chrome://extensions/
-   - Enable "Developer mode"
-   - Click "Load unpacked"
-   - Select the extension directory
-5. Configure the extension:
-   - Set up your Anthropic API key
-   - Configure any custom preferences
-6. Start using the extension:
-   - Click "Capture" to start capturing memos
-   - Click "Chat" to start chatting with your memos
-   - Click "Tags" to browse filtered memos
-
-## Development
-
-### Build System
-- Uses ESBuild for fast, efficient bundling
-- Outputs ES modules for modern browser compatibility
-- Optimizes dependencies for browser environment
-- Supports development and production builds
-
-### Dependencies
-- Production:
-  - @anthropic-ai/sdk: AI integration for content processing
-- Development:
-  - esbuild: Modern JavaScript bundling
-
-### Architecture
-- ES Module-based design
-- Browser-compatible output
-- Minimal external dependencies
-- Optimized bundle size
-
-## Future Roadmap
-
-*Note: These are just ideas and not necessarily in order of priority and not all will be implemented as right now I am only working on this over weekends. If you are interested in collaborating on this project, please reach out.*
-
-1. Multi-LLM Integration: Enable users to choose between OpenAI, Google, or run local models via Ollama for content processing and chat interactions.
-
-2. Extended Content Sources: Capture and process content from YouTube videos, Twitter threads, and other social media platforms directly within the extension.
-
-3. Rich Media Support: Process and analyze images, videos, and audio content, enabling comprehensive multi-media content capture and organization.
-
-4. Advanced Format Handling: Import and process content from markdown files, PDFs, and other document formats while preserving structure and formatting.
-
-5. Enhanced Content Analysis: Implement sentiment analysis, topic modeling, and advanced content categorization to provide deeper insights into captured content.
-
-6. Data Visualization: Generate interactive charts, graphs, and visual representations of content relationships and insights.
-
-7. Content Distribution: Share memos and insights via email, SMS, and other communication channels directly from the extension.
-
-8. Collaborative Features: Enable memo sharing and collaborative content organization among team members or research groups.
-
-9. Task Management Integration: Convert memos into actionable items like to-do lists, checklists, and project milestones.
-
-10. Calendar Integration: Create calendar events, schedule meetings, and set reminders based on memo content and insights.
-
-11. Automated Workflows: Implement AI agents that can execute tasks based on memo content, such as creating shopping lists or scheduling appointments.
-
-12. System Integration: Enable the extension to interact with system applications, creating spreadsheets, performing web searches, and managing files based on memo content and user objectives.
 

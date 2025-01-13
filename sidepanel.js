@@ -19,7 +19,7 @@ import {
     displayMemoDetail,
     getTagStyle
 } from './ui.js';
-import { createSystemMessage, calculateTokenCount } from './anthropic.js';
+import { createSystemMessage, calculateTokenCount } from './anthropic-api.js';
 
 // UI Elements
 const memoButton = document.getElementById('memoButton');
@@ -581,11 +581,8 @@ async function selectChatTag(tag) {
     const systemMsg = createSystemMessage(taggedMemos, currentChatTag, false);
     chatMessages.push({ role: 'system', content: systemMsg });
 
-    // Clear any existing saved chats section first
-    const chatToolbar = document.querySelector('.saved-chats');
-    if (chatToolbar) {
-        chatToolbar.innerHTML = '';
-    }
+    // Display filtered saved chats
+    displayTagFilteredSavedChats(tag.name);
 }
 
 // Update token count display
@@ -803,6 +800,9 @@ function loadSavedChat(chat) {
 
     // Show save button
     saveChatButton.classList.remove('hidden');
+    
+    // Display filtered saved chats for the current tag
+    displayTagFilteredSavedChats(chat.tag.name);
 }
 
 // Update the tag-related event listeners
@@ -837,4 +837,71 @@ document.getElementById('saveNewTag').addEventListener('click', async () => {
         document.getElementById('newTagDescription').value = '';
         document.getElementById('addTagForm').classList.add('hidden');
     }
-}); 
+});
+
+// Display saved chats filtered by tag
+function displayTagFilteredSavedChats(tagName) {
+    const savedChatsSection = document.getElementById('savedChatsSection');
+    
+    chrome.storage.local.get(['savedChats'], (result) => {
+        const savedChats = result.savedChats || [];
+        const filteredChats = savedChats.filter(chat => chat.tag.name === tagName);
+        
+        if (filteredChats.length === 0) {
+            savedChatsSection.innerHTML = '';
+            return;
+        }
+        
+        savedChatsSection.innerHTML = `
+            <div class="border-t pt-4">
+                <h3 class="text-sm font-semibold text-gray-700 mb-2">Related Saved Chats</h3>
+                <div class="space-y-2">
+                    ${filteredChats.map(chat => `
+                        <div class="bg-white rounded-lg shadow p-3 cursor-pointer hover:bg-gray-50 transition-colors duration-200" 
+                             data-chat-id="${chat.id}">
+                            <div class="flex flex-col">
+                                <h4 class="text-sm font-medium text-gray-800">${chat.title}</h4>
+                                <div class="flex justify-between items-center mt-1">
+                                    <p class="text-xs text-gray-500">
+                                        ${new Date(chat.timestamp).toLocaleString()}
+                                    </p>
+                                    <button class="delete-filtered-chat text-gray-400 hover:text-red-500 p-1" data-chat-id="${chat.id}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        // Add click handlers for loading chats
+        filteredChats.forEach(chat => {
+            const chatElement = savedChatsSection.querySelector(`[data-chat-id="${chat.id}"]`);
+            chatElement.addEventListener('click', (e) => {
+                if (!e.target.closest('.delete-filtered-chat')) {
+                    loadSavedChat(chat);
+                }
+            });
+
+            // Add click handler for delete button
+            const deleteButton = chatElement.querySelector('.delete-filtered-chat');
+            deleteButton.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const confirmed = await showDeleteConfirmation('Are you sure you want to delete this saved chat?');
+                if (confirmed) {
+                    const result = await chrome.storage.local.get(['savedChats']);
+                    const savedChats = result.savedChats || [];
+                    const updatedChats = savedChats.filter(c => c.id !== chat.id);
+                    await chrome.storage.local.set({ savedChats: updatedChats });
+                    showStatus('success', 'Chat deleted');
+                    displaySavedChats(); // Update main saved chats list
+                    displayTagFilteredSavedChats(tagName); // Update filtered list
+                }
+            });
+        });
+    });
+} 
