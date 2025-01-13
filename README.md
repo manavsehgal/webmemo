@@ -148,7 +148,7 @@ The LLM (Large Language Model) provider integration is a core component of Web M
 #### Core Components
 1. **LLM Provider Factory**
    - Central factory class for creating LLM provider instances
-   - Supports multiple provider types (currently Anthropic Claude)
+   - Supports multiple provider types (currently Anthropic Claude 3.5 Sonnet)
    - Handles provider configuration and validation
    - Extensible design for future LLM integrations
 
@@ -157,25 +157,36 @@ The LLM (Large Language Model) provider integration is a core component of Web M
    - Handles memo processing and chat message routing
    - Manages API key initialization and storage
    - Provides error handling and recovery
+   - Processes content with 4096 token limit
+   - Implements browser-compatible Anthropic client
 
 3. **UI Integration**
    - Chat interface in sidepanel.js
    - Message display and formatting
    - Chat history management
    - Memo citation and navigation
-   - Memo display and management through ui.js
+   - Token count tracking
+   - Source vs. processed content toggle
 
 #### Data Flow
 1. **Memo Processing**
    - Content capture → handleMemo()
+   - Content sanitization and cleaning
    - Content processing through Claude
+   - Automatic tag suggestion
+   - Title and summary extraction
+   - Narrative generation
+   - Structured data identification
    - Storage and display of processed content
 
 2. **Chat Interactions**
    - User message routing
+   - Context assembly from tagged memos
+   - System message generation
    - LLM provider processing
    - Response formatting with memo citations
    - Chat history management
+   - Source content toggle support
 
 #### Key Features
 - Tag-based memo organization
@@ -184,6 +195,10 @@ The LLM (Large Language Model) provider integration is a core component of Web M
 - Source vs. processed content toggle
 - Saved chat conversation management
 - Memo citation and navigation system
+- Token-aware processing
+- Secure API key management
+- Error handling and recovery
+- Cross-origin support
 
 ### Content Capture System
 The Content Capture System enables users to select and save content from any webpage, with intelligent processing and organization. Here's how it works:
@@ -194,12 +209,18 @@ The Content Capture System enables users to select and save content from any web
    - Real-time element highlighting and preview
    - Cross-origin content capture support
    - Visual selection guide and cursor feedback
+   - DOM traversal and element identification
+   - Safe content extraction
 
 2. **Content Processing**
    - HTML content sanitization and cleaning
-   - Removal of scripts, styles, and unwanted markup
-   - Preservation of essential attributes and structure
-   - Automatic metadata extraction (URL, favicon, timestamp)
+   - Control character handling
+   - Script and style removal
+   - Essential attribute preservation
+   - Metadata extraction (URL, favicon, timestamp)
+   - Word count tracking
+   - JSON data validation
+   - Cross-origin resource handling
 
 3. **Background Processing**
    - Asynchronous content processing through Claude
@@ -207,20 +228,27 @@ The Content Capture System enables users to select and save content from any web
    - Title and summary extraction
    - Narrative content generation
    - Structured data identification
+   - Error handling and recovery
+   - Progress tracking
+   - Status notifications
 
 #### Data Flow
 1. **Selection Process**
    - User activates capture mode
    - Real-time element highlighting
    - Click to select content
-   - Initial content cleaning and sanitization
+   - Initial content cleaning
+   - Metadata gathering
+   - Word count calculation
 
 2. **Processing Pipeline**
    - Content sanitization and normalization
-   - Metadata extraction
+   - Metadata extraction and validation
    - LLM processing for insights
+   - Tag suggestion generation
    - Storage and indexing
    - UI updates and notifications
+   - Error handling and recovery
 
 #### Key Features
 - Visual element highlighting
@@ -231,6 +259,10 @@ The Content Capture System enables users to select and save content from any web
 - Progress indicators
 - Error handling and recovery
 - Source preservation
+- Word count tracking
+- JSON data validation
+- Safe content extraction
+- Real-time feedback
 
 ### Storage and Data Management
 The Storage and Data Management system provides robust local data persistence and synchronization capabilities. Here's how it works:
@@ -238,34 +270,53 @@ The Storage and Data Management system provides robust local data persistence an
 #### Core Components
 1. **Local Storage**
    - Chrome's storage.local API for primary data storage
-   - Stores complete memo content, tags, and chat history
-   - Handles large content volumes efficiently
-   - Maintains data structure integrity
+   - Complete memo content and metadata storage
+   - Tag definitions and hierarchies
+   - Chat history and context
+   - API key management
+   - User preferences
+   - Large content volume handling
+   - Data structure integrity
 
 2. **Sync Storage**
    - Chrome's storage.sync API for backup and sync
-   - Stores lightweight metadata for cross-device sync
-   - Handles API keys and user preferences
-   - Provides data recovery capabilities
+   - Lightweight metadata synchronization
+   - Cross-device tag definitions
+   - Minimal memo metadata backup
+   - Chat history metadata
+   - Quota-aware storage management
+   - Fallback mechanisms
+   - Recovery capabilities
 
 3. **Data Models**
    - Memo: content, metadata, tags, and structured data
-   - Tags: name, description, color, and icon
-   - Chats: messages, context, and tag associations
+   - Tags: name, description, color, icon, and hierarchy
+   - Chats: messages, context, tag associations
    - User preferences and API configurations
+   - Backup metadata structures
+   - Recovery checkpoints
+   - Version information
 
 #### Data Flow
 1. **Storage Operations**
-   - Automatic saving of captured content
-   - Background synchronization of metadata
-   - Incremental updates for large datasets
-   - Error handling and recovery mechanisms
+   - Automatic content saving
+   - Background metadata sync
+   - Incremental large dataset updates
+   - Quota monitoring
+   - Error handling and recovery
+   - Data integrity validation
+   - Version management
+   - Backup scheduling
 
 2. **Data Management**
-   - CRUD operations for memos and tags
+   - CRUD operations for all entities
    - Automatic backup creation
    - Data integrity validation
    - Storage quota management
+   - Cross-device synchronization
+   - Recovery procedures
+   - Version control
+   - Cleanup routines
 
 #### Key Features
 - Offline-first architecture
@@ -276,6 +327,10 @@ The Storage and Data Management system provides robust local data persistence an
 - Quota management
 - Data integrity checks
 - Secure API key storage
+- Version control
+- Cleanup management
+- Recovery procedures
+- Backup scheduling
 
 ### Tag Management System
 The Tag Management System provides a flexible and intuitive way to organize and categorize content. Here's how it works:
@@ -287,6 +342,9 @@ The Tag Management System provides a flexible and intuitive way to organize and 
    - Memo count tracking
    - Hierarchical organization support
    - Predefined and custom tags
+   - Category-based organization
+   - Icon library with categories
+   - Color scheme management
 
 2. **Tag Operations**
    - Create, read, update, delete (CRUD) operations
@@ -294,38 +352,53 @@ The Tag Management System provides a flexible and intuitive way to organize and 
    - Automatic tag suggestions
    - Batch tag management
    - Tag count maintenance
+   - Real-time updates
+   - Search and filtering
+   - Category management
 
-3. **UI Integration**
-   - Visual tag editor and creator
-   - Icon selection with categorized options
-   - Color scheme customization
-   - Tag filtering and search
-   - Tag-based memo filtering
+3. **UI Components**
+   - Tag creation interface
+   - Color picker with presets
+   - Icon selector with categories
+   - Tag list with counts
+   - Search and filter controls
+   - Drag and drop organization
+   - Category collapsing
+   - Visual feedback
 
-#### Data Flow
-1. **Tag Creation**
-   - User input validation
-   - Duplicate checking
-   - Visual customization
-   - Storage synchronization
-   - UI updates
+#### Tag Categories
+1. **Development**
+   - Code
+   - Terminal
+   - Database
+   - Chip
+   - Cloud
 
-2. **Tag Usage**
-   - Memo tagging and untagging
-   - Tag-based filtering
-   - Count updates
-   - Chat context integration
-   - Search and organization
+2. **Organization**
+   - Folder
+   - Collection
+   - Archive
+   - Briefcase
+
+3. **Research**
+   - Search
+   - Analysis
+   - Documentation
+   - References
 
 #### Key Features
-- Rich visual customization
-- Intuitive tag management
-- Automatic tag suggestions
-- Tag-based organization
-- Tag-specific chat contexts
-- Tag statistics and analytics
+- Visual tag customization
 - Hierarchical organization
-- Cross-memo tag consistency
+- Real-time count updates
+- Category-based grouping
+- Icon library
+- Color schemes
+- Search and filtering
+- Batch operations
+- Automatic suggestions
+- Count maintenance
+- Visual feedback
+- Category management
 
 ### UI Components and Workflow
 The UI system provides an intuitive and responsive interface for managing memos and interacting with content. Here's how it works:
@@ -337,6 +410,9 @@ The UI system provides an intuitive and responsive interface for managing memos 
    - Chat interface toggle
    - Settings panel access
    - Content capture button
+   - Status indicators
+   - View mode controls
+   - Search interface
 
 2. **Content Views**
    - Memo List: Displays all memos with filtering
@@ -344,6 +420,9 @@ The UI system provides an intuitive and responsive interface for managing memos 
    - Tag Management: Interface for organizing tags
    - Chat Interface: Context-aware chat system
    - Settings Panel: Configuration options
+   - Search Results: Filtered memo display
+   - Status Messages: User feedback
+   - Loading States: Progress indicators
 
 3. **Interactive Elements**
    - Content capture highlighting
@@ -351,6 +430,9 @@ The UI system provides an intuitive and responsive interface for managing memos 
    - Chat message composition
    - Source/processed content toggle
    - Status notifications
+   - API key management
+   - Search controls
+   - View toggles
 
 #### Workflow Processes
 1. **Content Capture**
@@ -358,18 +440,30 @@ The UI system provides an intuitive and responsive interface for managing memos 
    - Visual highlight mode with feedback
    - Content selection and processing
    - Tag assignment and organization
+   - Progress tracking
+   - Status updates
+   - Error handling
+   - Success confirmation
 
 2. **Content Management**
    - Memo browsing and filtering
    - Detail view navigation
    - Export and sharing options
    - Deletion with confirmation
+   - Tag organization
+   - Search functionality
+   - Batch operations
+   - Status tracking
 
 3. **Chat Interaction**
    - Tag-based context selection
    - Message composition
    - Citation and reference system
    - Chat history management
+   - Source content toggle
+   - Token tracking
+   - Status updates
+   - Error handling
 
 #### Key Features
 - Modern, responsive design
@@ -380,6 +474,10 @@ The UI system provides an intuitive and responsive interface for managing memos 
 - Cross-browser compatibility
 - Accessibility support
 - Error handling with feedback
+- Progress indicators
+- Loading states
+- Success confirmations
+- Visual feedback system
 
 ### Security and Privacy Features
 The Security and Privacy system ensures user data protection and secure API interactions. Here's how it works:
@@ -391,6 +489,9 @@ The Security and Privacy system ensures user data protection and secure API inte
    - Secure backup synchronization
    - Minimal metadata sync strategy
    - Data integrity validation
+   - Storage quota management
+   - Safe deletion procedures
+   - Recovery mechanisms
 
 2. **API Security**
    - Secure API key management
@@ -398,6 +499,9 @@ The Security and Privacy system ensures user data protection and secure API inte
    - Key visibility controls
    - API access validation
    - Request/response encryption
+   - Cross-origin protection
+   - Rate limiting
+   - Error handling
 
 3. **Content Security**
    - Content Security Policy (CSP) enforcement
@@ -405,6 +509,9 @@ The Security and Privacy system ensures user data protection and secure API inte
    - Script injection prevention
    - Secure content sanitization
    - Safe HTML processing
+   - DOM sanitization
+   - JSON validation
+   - Error boundaries
 
 #### Security Measures
 1. **API Key Protection**
@@ -413,6 +520,9 @@ The Security and Privacy system ensures user data protection and secure API inte
    - Automatic key validation
    - Secure key transmission
    - Key recovery mechanisms
+   - Access control
+   - Usage monitoring
+   - Revocation handling
 
 2. **Data Protection**
    - Local storage encryption
@@ -420,6 +530,9 @@ The Security and Privacy system ensures user data protection and secure API inte
    - Data integrity checks
    - Safe deletion procedures
    - Recovery mechanisms
+   - Version control
+   - Access logging
+   - Quota monitoring
 
 3. **Extension Security**
    - Strict CSP implementation
@@ -427,6 +540,9 @@ The Security and Privacy system ensures user data protection and secure API inte
    - Secure message passing
    - Safe content handling
    - Error state management
+   - Version validation
+   - Update checks
+   - Integrity verification
 
 #### Key Features
 - Encrypted storage system
@@ -437,6 +553,10 @@ The Security and Privacy system ensures user data protection and secure API inte
 - Privacy-first architecture
 - Secure key management
 - Safe data recovery
+- Version control
+- Access monitoring
+- Error boundaries
+- Integrity checks
 
 ### Chat System Architecture
 The Chat System provides an intelligent interface for interacting with memo content through natural language. Here's how it works:
@@ -450,6 +570,9 @@ The Chat System provides an intelligent interface for interacting with memo cont
    - Token count display
    - Chat history viewer
    - Save/restore functionality
+   - Status indicators
+   - Error feedback
+   - Loading states
 
 2. **Message Processing**
    - System message generation
@@ -458,6 +581,10 @@ The Chat System provides an intelligent interface for interacting with memo cont
    - Response formatting
    - Citation linking
    - Error handling
+   - Token management
+   - Rate limiting
+   - Retry logic
+   - Status tracking
 
 3. **Chat Management**
    - Conversation persistence
@@ -466,6 +593,10 @@ The Chat System provides an intelligent interface for interacting with memo cont
    - Chat restoration
    - Context switching
    - Session management
+   - Backup creation
+   - Search functionality
+   - Export options
+   - Cleanup routines
 
 #### Data Flow
 1. **Message Handling**
@@ -475,6 +606,10 @@ The Chat System provides an intelligent interface for interacting with memo cont
    - Response rendering
    - Citation generation
    - UI state management
+   - Error recovery
+   - Status updates
+   - Token tracking
+   - Rate monitoring
 
 2. **Context Management**
    - Tag-based memo filtering
@@ -483,6 +618,10 @@ The Chat System provides an intelligent interface for interacting with memo cont
    - Token counting
    - Context windowing
    - Memory management
+   - Cache handling
+   - State persistence
+   - Error boundaries
+   - Recovery logic
 
 3. **Chat Storage**
    - Conversation saving
@@ -491,6 +630,10 @@ The Chat System provides an intelligent interface for interacting with memo cont
    - Backup creation
    - Safe deletion
    - Recovery options
+   - Version control
+   - Search indexing
+   - Export handling
+   - Cleanup scheduling
 
 #### Key Features
 - Context-aware responses
@@ -503,6 +646,8 @@ The Chat System provides an intelligent interface for interacting with memo cont
 - Error recovery
 - Saved chat browsing
 - Multi-context support
+- Search functionality
+- Export capabilities
 
 ### Error Handling and Recovery
 The Error Handling and Recovery system ensures robust operation and graceful failure handling. Here's how it works:
@@ -515,6 +660,10 @@ The Error Handling and Recovery system ensures robust operation and graceful fai
    - Success confirmations
    - Operation progress tracking
    - Automatic status clearing
+   - Loading states
+   - Rate limit indicators
+   - Network status
+   - API health checks
 
 2. **Error Detection**
    - API failure monitoring
@@ -523,6 +672,10 @@ The Error Handling and Recovery system ensures robust operation and graceful fai
    - Data validation
    - State consistency checks
    - Resource availability monitoring
+   - Token limit tracking
+   - Rate limit detection
+   - Version conflicts
+   - Permission issues
 
 3. **Recovery Mechanisms**
    - Automatic data backup
@@ -531,6 +684,10 @@ The Error Handling and Recovery system ensures robust operation and graceful fai
    - Operation retry logic
    - Fallback strategies
    - User notification system
+   - Cache recovery
+   - Version rollback
+   - State reconciliation
+   - Cleanup procedures
 
 #### Error Handling Flow
 1. **Operation Monitoring**
@@ -540,6 +697,10 @@ The Error Handling and Recovery system ensures robust operation and graceful fai
    - Resource monitoring
    - Performance tracking
    - User feedback
+   - Rate monitoring
+   - Token tracking
+   - Network status
+   - API health
 
 2. **Recovery Process**
    - Error categorization
@@ -548,6 +709,10 @@ The Error Handling and Recovery system ensures robust operation and graceful fai
    - Data reconciliation
    - User notification
    - Operation resumption
+   - Cache rebuilding
+   - Version handling
+   - Permission resolution
+   - Status updates
 
 3. **Prevention Measures**
    - Data validation
@@ -556,6 +721,10 @@ The Error Handling and Recovery system ensures robust operation and graceful fai
    - Quota management
    - Backup creation
    - Safe operation patterns
+   - Rate limiting
+   - Token management
+   - Version control
+   - Access validation
 
 #### Key Features
 - Real-time status updates
@@ -566,6 +735,10 @@ The Error Handling and Recovery system ensures robust operation and graceful fai
 - State preservation
 - Safe deletion procedures
 - Recovery mechanisms
+- Version control
+- Rate limiting
+- Token management
+- Access validation
 
 ### Extension Architecture
 The Extension Architecture follows Chrome's Manifest V3 specifications, providing a robust and secure foundation. Here's how it works:
@@ -577,6 +750,11 @@ The Extension Architecture follows Chrome's Manifest V3 specifications, providin
    - Manages API initialization and message routing
    - Processes memos and chat interactions asynchronously
    - Maintains extension lifecycle and data persistence
+   - Handles cross-origin requests
+   - Manages API rate limiting
+   - Implements error recovery
+   - Controls state synchronization
+   - Monitors resource usage
 
 2. **Content Scripts**
    - Injected into web pages for content interaction
@@ -584,6 +762,11 @@ The Extension Architecture follows Chrome's Manifest V3 specifications, providin
    - Handles cross-origin content capture
    - Communicates with service worker via messages
    - Provides real-time visual feedback
+   - Implements DOM sanitization
+   - Controls content extraction
+   - Manages user interactions
+   - Handles error states
+   - Updates UI elements
 
 3. **Side Panel Interface**
    - Primary user interface (`sidepanel.html`, `sidepanel.js`)
@@ -591,6 +774,11 @@ The Extension Architecture follows Chrome's Manifest V3 specifications, providin
    - Handles chat interface and interactions
    - Controls tag management and settings
    - Provides status notifications and feedback
+   - Implements search functionality
+   - Manages view states
+   - Controls user preferences
+   - Handles data display
+   - Updates real-time status
 
 #### Communication Flow
 1. **Message Passing**
@@ -599,6 +787,11 @@ The Extension Architecture follows Chrome's Manifest V3 specifications, providin
    - Cross-origin message handling
    - Error state propagation
    - Status updates and notifications
+   - Rate limit management
+   - Token tracking
+   - State synchronization
+   - Cache management
+   - Resource monitoring
 
 2. **State Management**
    - Local storage for persistent data
@@ -606,6 +799,11 @@ The Extension Architecture follows Chrome's Manifest V3 specifications, providin
    - API key management
    - Runtime state handling
    - Error recovery mechanisms
+   - Version control
+   - Cache management
+   - Resource tracking
+   - Status monitoring
+   - Update handling
 
 #### Key Features
 - Manifest V3 compliance
@@ -618,6 +816,8 @@ The Extension Architecture follows Chrome's Manifest V3 specifications, providin
 - Real-time UI updates
 - Robust error handling
 - Development and production builds
+- Resource optimization
+- State persistence
 
 ### Build and Development System
 The Build and Development System provides a streamlined workflow for developing and deploying the extension. Here's how it works:
@@ -630,6 +830,10 @@ The Build and Development System provides a streamlined workflow for developing 
    - Dependency optimization
    - CSP-compliant bundling
    - Development and production modes
+   - Source map generation
+   - Asset optimization
+   - Version management
+   - Bundle analysis
 
 2. **Development Environment**
    - Node.js runtime environment
@@ -638,6 +842,10 @@ The Build and Development System provides a streamlined workflow for developing 
    - Chrome Extension APIs
    - Local development server
    - Hot reload support
+   - Debug logging
+   - Error tracking
+   - Performance monitoring
+   - Testing utilities
 
 3. **Project Structure**
    - Source code organization
@@ -646,6 +854,10 @@ The Build and Development System provides a streamlined workflow for developing 
    - Build output management
    - Environment configuration
    - Version control integration
+   - Documentation
+   - Test organization
+   - Resource management
+   - Dependency tracking
 
 #### Build Process
 1. **Development Build**
@@ -655,6 +867,10 @@ The Build and Development System provides a streamlined workflow for developing 
    - Automatic dependency resolution
    - Module format preservation
    - Browser-compatible output
+   - Debug features
+   - Hot reloading
+   - Error reporting
+   - Performance tracking
 
 2. **Production Build**
    - Code optimization and minification
@@ -663,6 +879,10 @@ The Build and Development System provides a streamlined workflow for developing 
    - Asset optimization
    - CSP header generation
    - Distribution package creation
+   - Version tagging
+   - Source map handling
+   - Bundle analysis
+   - Release preparation
 
 #### Key Features
 - Fast, efficient bundling
@@ -675,6 +895,8 @@ The Build and Development System provides a streamlined workflow for developing 
 - Source map support
 - Hot reload capability
 - Error reporting
+- Performance tracking
+- Version management
 
 ## Future Roadmap
 
