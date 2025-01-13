@@ -140,6 +140,542 @@ Note: The extension uses strict Content Security Policy (CSP) settings. When dev
 - Minimal external dependencies
 - Optimized bundle size
 
+## Documentation
+
+### LLM Provider Architecture
+The LLM (Large Language Model) provider integration is a core component of Web Memo, handling content processing and chat functionality. Here's how it works:
+
+#### Core Components
+1. **LLM Provider Factory**
+   - Central factory class for creating LLM provider instances
+   - Supports multiple provider types (currently Anthropic Claude)
+   - Handles provider configuration and validation
+   - Extensible design for future LLM integrations
+
+2. **Background Processing**
+   - Manages core LLM operations in background.js
+   - Handles memo processing and chat message routing
+   - Manages API key initialization and storage
+   - Provides error handling and recovery
+
+3. **UI Integration**
+   - Chat interface in sidepanel.js
+   - Message display and formatting
+   - Chat history management
+   - Memo citation and navigation
+   - Memo display and management through ui.js
+
+#### Data Flow
+1. **Memo Processing**
+   - Content capture → handleMemo()
+   - Content processing through Claude
+   - Storage and display of processed content
+
+2. **Chat Interactions**
+   - User message routing
+   - LLM provider processing
+   - Response formatting with memo citations
+   - Chat history management
+
+#### Key Features
+- Tag-based memo organization
+- Context-aware chat with memo references
+- Structured data extraction
+- Source vs. processed content toggle
+- Saved chat conversation management
+- Memo citation and navigation system
+
+### Content Capture System
+The Content Capture System enables users to select and save content from any webpage, with intelligent processing and organization. Here's how it works:
+
+#### Core Components
+1. **Content Selection**
+   - Interactive highlight mode with visual feedback
+   - Real-time element highlighting and preview
+   - Cross-origin content capture support
+   - Visual selection guide and cursor feedback
+
+2. **Content Processing**
+   - HTML content sanitization and cleaning
+   - Removal of scripts, styles, and unwanted markup
+   - Preservation of essential attributes and structure
+   - Automatic metadata extraction (URL, favicon, timestamp)
+
+3. **Background Processing**
+   - Asynchronous content processing through Claude
+   - Automatic tag suggestion
+   - Title and summary extraction
+   - Narrative content generation
+   - Structured data identification
+
+#### Data Flow
+1. **Selection Process**
+   - User activates capture mode
+   - Real-time element highlighting
+   - Click to select content
+   - Initial content cleaning and sanitization
+
+2. **Processing Pipeline**
+   - Content sanitization and normalization
+   - Metadata extraction
+   - LLM processing for insights
+   - Storage and indexing
+   - UI updates and notifications
+
+#### Key Features
+- Visual element highlighting
+- Intelligent content cleaning
+- Cross-origin support
+- Automatic tag suggestion
+- Structured data extraction
+- Progress indicators
+- Error handling and recovery
+- Source preservation
+
+### Storage and Data Management
+The Storage and Data Management system provides robust local data persistence and synchronization capabilities. Here's how it works:
+
+#### Core Components
+1. **Local Storage**
+   - Chrome's storage.local API for primary data storage
+   - Stores complete memo content, tags, and chat history
+   - Handles large content volumes efficiently
+   - Maintains data structure integrity
+
+2. **Sync Storage**
+   - Chrome's storage.sync API for backup and sync
+   - Stores lightweight metadata for cross-device sync
+   - Handles API keys and user preferences
+   - Provides data recovery capabilities
+
+3. **Data Models**
+   - Memo: content, metadata, tags, and structured data
+   - Tags: name, description, color, and icon
+   - Chats: messages, context, and tag associations
+   - User preferences and API configurations
+
+#### Data Flow
+1. **Storage Operations**
+   - Automatic saving of captured content
+   - Background synchronization of metadata
+   - Incremental updates for large datasets
+   - Error handling and recovery mechanisms
+
+2. **Data Management**
+   - CRUD operations for memos and tags
+   - Automatic backup creation
+   - Data integrity validation
+   - Storage quota management
+
+#### Key Features
+- Offline-first architecture
+- Automatic data backup
+- Cross-device synchronization
+- Data recovery mechanisms
+- Storage optimization
+- Quota management
+- Data integrity checks
+- Secure API key storage
+
+### Tag Management System
+The Tag Management System provides a flexible and intuitive way to organize and categorize content. Here's how it works:
+
+#### Core Components
+1. **Tag Structure**
+   - Name and description fields
+   - Visual customization (colors and icons)
+   - Memo count tracking
+   - Hierarchical organization support
+   - Predefined and custom tags
+
+2. **Tag Operations**
+   - Create, read, update, delete (CRUD) operations
+   - Validation and duplicate prevention
+   - Automatic tag suggestions
+   - Batch tag management
+   - Tag count maintenance
+
+3. **UI Integration**
+   - Visual tag editor and creator
+   - Icon selection with categorized options
+   - Color scheme customization
+   - Tag filtering and search
+   - Tag-based memo filtering
+
+#### Data Flow
+1. **Tag Creation**
+   - User input validation
+   - Duplicate checking
+   - Visual customization
+   - Storage synchronization
+   - UI updates
+
+2. **Tag Usage**
+   - Memo tagging and untagging
+   - Tag-based filtering
+   - Count updates
+   - Chat context integration
+   - Search and organization
+
+#### Key Features
+- Rich visual customization
+- Intuitive tag management
+- Automatic tag suggestions
+- Tag-based organization
+- Tag-specific chat contexts
+- Tag statistics and analytics
+- Hierarchical organization
+- Cross-memo tag consistency
+
+### UI Components and Workflow
+The UI system provides an intuitive and responsive interface for managing memos and interacting with content. Here's how it works:
+
+#### Core Components
+1. **Navigation Bar**
+   - Memo list/detail toggle
+   - Tag management access
+   - Chat interface toggle
+   - Settings panel access
+   - Content capture button
+
+2. **Content Views**
+   - Memo List: Displays all memos with filtering
+   - Memo Detail: Shows comprehensive memo information
+   - Tag Management: Interface for organizing tags
+   - Chat Interface: Context-aware chat system
+   - Settings Panel: Configuration options
+
+3. **Interactive Elements**
+   - Content capture highlighting
+   - Tag selection and filtering
+   - Chat message composition
+   - Source/processed content toggle
+   - Status notifications
+
+#### Workflow Processes
+1. **Content Capture**
+   - Activation via toolbar button
+   - Visual highlight mode with feedback
+   - Content selection and processing
+   - Tag assignment and organization
+
+2. **Content Management**
+   - Memo browsing and filtering
+   - Detail view navigation
+   - Export and sharing options
+   - Deletion with confirmation
+
+3. **Chat Interaction**
+   - Tag-based context selection
+   - Message composition
+   - Citation and reference system
+   - Chat history management
+
+#### Key Features
+- Modern, responsive design
+- Intuitive navigation system
+- Real-time status updates
+- Smooth transitions
+- Keyboard shortcuts
+- Cross-browser compatibility
+- Accessibility support
+- Error handling with feedback
+
+### Security and Privacy Features
+The Security and Privacy system ensures user data protection and secure API interactions. Here's how it works:
+
+#### Core Components
+1. **Data Storage Security**
+   - Local-first data storage architecture
+   - Encrypted Chrome storage APIs
+   - Secure backup synchronization
+   - Minimal metadata sync strategy
+   - Data integrity validation
+
+2. **API Security**
+   - Secure API key management
+   - Encrypted key storage
+   - Key visibility controls
+   - API access validation
+   - Request/response encryption
+
+3. **Content Security**
+   - Content Security Policy (CSP) enforcement
+   - Cross-origin resource protection
+   - Script injection prevention
+   - Secure content sanitization
+   - Safe HTML processing
+
+#### Security Measures
+1. **API Key Protection**
+   - Secure key storage in Chrome's encrypted storage
+   - Key visibility toggle in UI
+   - Automatic key validation
+   - Secure key transmission
+   - Key recovery mechanisms
+
+2. **Data Protection**
+   - Local storage encryption
+   - Secure backup strategy
+   - Data integrity checks
+   - Safe deletion procedures
+   - Recovery mechanisms
+
+3. **Extension Security**
+   - Strict CSP implementation
+   - Limited host permissions
+   - Secure message passing
+   - Safe content handling
+   - Error state management
+
+#### Key Features
+- Encrypted storage system
+- Secure API communication
+- CSP-based security
+- Safe content processing
+- Data backup protection
+- Privacy-first architecture
+- Secure key management
+- Safe data recovery
+
+### Chat System Architecture
+The Chat System provides an intelligent interface for interacting with memo content through natural language. Here's how it works:
+
+#### Core Components
+1. **Chat Interface**
+   - Tag-based context selection
+   - Message composition area
+   - Real-time typing indicators
+   - Source content toggle
+   - Token count display
+   - Chat history viewer
+   - Save/restore functionality
+
+2. **Message Processing**
+   - System message generation
+   - Context assembly from memos
+   - LLM provider integration
+   - Response formatting
+   - Citation linking
+   - Error handling
+
+3. **Chat Management**
+   - Conversation persistence
+   - Tag-based organization
+   - History browsing
+   - Chat restoration
+   - Context switching
+   - Session management
+
+#### Data Flow
+1. **Message Handling**
+   - User input validation
+   - Context preparation
+   - Background processing
+   - Response rendering
+   - Citation generation
+   - UI state management
+
+2. **Context Management**
+   - Tag-based memo filtering
+   - System prompt generation
+   - Source/processed toggle
+   - Token counting
+   - Context windowing
+   - Memory management
+
+3. **Chat Storage**
+   - Conversation saving
+   - History organization
+   - Tag-based filtering
+   - Backup creation
+   - Safe deletion
+   - Recovery options
+
+#### Key Features
+- Context-aware responses
+- Tag-based conversations
+- Source/processed toggle
+- Real-time feedback
+- Citation system
+- History management
+- Token optimization
+- Error recovery
+- Saved chat browsing
+- Multi-context support
+
+### Error Handling and Recovery
+The Error Handling and Recovery system ensures robust operation and graceful failure handling. Here's how it works:
+
+#### Core Components
+1. **Status Management**
+   - Visual status indicators
+   - Error message display
+   - Processing state feedback
+   - Success confirmations
+   - Operation progress tracking
+   - Automatic status clearing
+
+2. **Error Detection**
+   - API failure monitoring
+   - Storage operation checks
+   - Network error detection
+   - Data validation
+   - State consistency checks
+   - Resource availability monitoring
+
+3. **Recovery Mechanisms**
+   - Automatic data backup
+   - State restoration
+   - Graceful degradation
+   - Operation retry logic
+   - Fallback strategies
+   - User notification system
+
+#### Error Handling Flow
+1. **Operation Monitoring**
+   - Status tracking
+   - Error detection
+   - State validation
+   - Resource monitoring
+   - Performance tracking
+   - User feedback
+
+2. **Recovery Process**
+   - Error categorization
+   - Recovery strategy selection
+   - State restoration
+   - Data reconciliation
+   - User notification
+   - Operation resumption
+
+3. **Prevention Measures**
+   - Data validation
+   - State consistency checks
+   - Resource pre-checks
+   - Quota management
+   - Backup creation
+   - Safe operation patterns
+
+#### Key Features
+- Real-time status updates
+- Graceful error recovery
+- Automatic data backup
+- User-friendly notifications
+- Operation retry logic
+- State preservation
+- Safe deletion procedures
+- Recovery mechanisms
+
+### Extension Architecture
+The Extension Architecture follows Chrome's Manifest V3 specifications, providing a robust and secure foundation. Here's how it works:
+
+#### Core Components
+1. **Service Worker**
+   - Background script (`background.js`) running as a service worker
+   - Handles core extension operations and state management
+   - Manages API initialization and message routing
+   - Processes memos and chat interactions asynchronously
+   - Maintains extension lifecycle and data persistence
+
+2. **Content Scripts**
+   - Injected into web pages for content interaction
+   - Manages highlight mode and element selection
+   - Handles cross-origin content capture
+   - Communicates with service worker via messages
+   - Provides real-time visual feedback
+
+3. **Side Panel Interface**
+   - Primary user interface (`sidepanel.html`, `sidepanel.js`)
+   - Manages memo list and detail views
+   - Handles chat interface and interactions
+   - Controls tag management and settings
+   - Provides status notifications and feedback
+
+#### Communication Flow
+1. **Message Passing**
+   - Content script ↔ Service Worker communication
+   - Side Panel ↔ Service Worker interaction
+   - Cross-origin message handling
+   - Error state propagation
+   - Status updates and notifications
+
+2. **State Management**
+   - Local storage for persistent data
+   - Sync storage for cross-device metadata
+   - API key management
+   - Runtime state handling
+   - Error recovery mechanisms
+
+#### Key Features
+- Manifest V3 compliance
+- ES Module-based architecture
+- Minimal external dependencies
+- Optimized bundle size
+- CSP-compliant security
+- Cross-origin support
+- Asynchronous processing
+- Real-time UI updates
+- Robust error handling
+- Development and production builds
+
+### Build and Development System
+The Build and Development System provides a streamlined workflow for developing and deploying the extension. Here's how it works:
+
+#### Core Components
+1. **Build System**
+   - ESBuild-based bundling system
+   - Service worker bundling with browser targeting
+   - ES Module output format
+   - Dependency optimization
+   - CSP-compliant bundling
+   - Development and production modes
+
+2. **Development Environment**
+   - Node.js runtime environment
+   - NPM package management
+   - Module-based architecture
+   - Chrome Extension APIs
+   - Local development server
+   - Hot reload support
+
+3. **Project Structure**
+   - Source code organization
+   - Asset management
+   - Configuration files
+   - Build output management
+   - Environment configuration
+   - Version control integration
+
+#### Build Process
+1. **Development Build**
+   - Fast bundling with ESBuild
+   - Source map generation
+   - Development-specific optimizations
+   - Automatic dependency resolution
+   - Module format preservation
+   - Browser-compatible output
+
+2. **Production Build**
+   - Code optimization and minification
+   - Dead code elimination
+   - Dependency tree shaking
+   - Asset optimization
+   - CSP header generation
+   - Distribution package creation
+
+#### Key Features
+- Fast, efficient bundling
+- ES Module support
+- Browser compatibility
+- Minimal dependencies
+- Development optimization
+- Production readiness
+- CSP compliance
+- Source map support
+- Hot reload capability
+- Error reporting
+
 ## Future Roadmap
 
 *Note: These are just ideas and not necessarily in order of priority and not all will be implemented as right now I am only working on this over weekends. If you are interested in collaborating on this project, please reach out.*
